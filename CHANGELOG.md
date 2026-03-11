@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.0] - 2026-03-12
+
+### ✨ Features
+- Phase 3·4 대시보드 전체 구현 — DashboardLayout, KpiCard, DashboardFilters, GradeQuickFilter (4edf5af)
+- 차트 6종 신규 구현 — GradeDistribution, GradeProgress, AreaRadar, YearlyTrend, GenderComparison, BmiScatter (4edf5af)
+- useDashboard 훅 — deduplicateMeasurements, URL 기반 필터, useGenderComparison, useYearlyTrend 등 (4edf5af)
+- DashboardHome, Overview, ClassDetail, StudentDetail 페이지 구현 (4edf5af)
+- StudentDetail: 영역별 평균 등급, 측정일자별 추이, 연도 선택, 전체 측정 이력 표시 (4edf5af)
+- ClassDetail: 학생별 평균 히스토그램("체력요소별 평균 분포"), deduplicateMeasurements 적용 (4edf5af)
+- GenderComparisonChart 정방향 막대 그래프, 막대 위 수치 표기, 소수점 1자리 (4edf5af)
+- nowKST() 헬퍼 추가 — measurements/students/changelog API 측정일시 KST(+09:00) 저장 (4edf5af)
+
+### 🐛 Bug Fixes
+- is_active 파싱 버그 수정: Sheets API "FALSE" 대소문자 처리 (4edf5af)
+- 통계 기준 오류 수정: activeStudents 먼저 확정 후 deduped 기반 집계 (4edf5af)
+- StudentDetail height/weight 필드명 오류 수정 (4edf5af)
+
+### 📝 Documentation
+- CHANGELOG.md v0.2.1 추가 (1669ba2)
+
 ## [v0.2.1] - 2026-03-11
 
 ### 📝 Documentation
