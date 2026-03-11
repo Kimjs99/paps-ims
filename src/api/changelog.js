@@ -1,11 +1,11 @@
-import { sheetsRequest, withRetry } from "./sheetsClient";
+import { sheetsRequest, withRetry, nowKST } from "./sheetsClient";
 import { SHEET_NAMES } from "../constants/paps";
 import { v4 as uuidv4 } from "uuid";
 
 export const logChange = async (sheetId, { teacherEmail, tableName, recordId, fieldName, oldValue, newValue }) => {
   const row = [
     uuidv4(),
-    new Date().toISOString(),
+    nowKST(),
     teacherEmail,
     tableName,
     recordId,

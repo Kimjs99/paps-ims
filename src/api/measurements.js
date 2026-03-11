@@ -1,4 +1,4 @@
-import { sheetsRequest, withRetry } from "./sheetsClient";
+import { sheetsRequest, withRetry, nowKST } from "./sheetsClient";
 import { SHEET_NAMES } from "../constants/paps";
 
 // 행 배열 → 측정 객체 변환
@@ -32,7 +32,7 @@ const measurementToRow = (m) => [
   m.flexibility_value ?? "", m.flexibility_grade ?? "",
   m.agility_type ?? "", m.agility_value ?? "", m.agility_grade ?? "",
   m.bmi ?? "", m.bmi_grade ?? "", m.total_grade ?? "",
-  m.measured_at || new Date().toISOString(),
+  m.measured_at || nowKST(),
   m.teacher_email || "",
 ];
 

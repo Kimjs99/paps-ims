@@ -5,10 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 명령어
 
 ```bash
-bun run dev      # 개발 서버 실행 — http://localhost:5174
-bun run build    # 프로덕션 빌드
-bun run lint     # ESLint 실행 (--max-warnings=0 기준으로 유지)
-bun run preview  # 빌드 결과 미리보기
+bun run dev           # 개발 서버 실행 — http://localhost:5174
+bun run build         # 프로덕션 빌드
+bun run lint          # ESLint 실행 (--max-warnings=0 기준으로 유지)
+bun run preview       # 빌드 결과 미리보기
+bun run test          # 테스트 1회 실행 (Vitest)
+bun run test:watch    # 테스트 워치 모드
+bun run test:coverage # 커버리지 리포트 (목표: 80%+)
 ```
 
 > 패키지 설치는 항상 `bun add` / `bun add -D` 사용. `npm`/`yarn` 사용 금지.

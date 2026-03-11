@@ -1,3 +1,9 @@
+// KST(UTC+9) 현재 시각을 ISO 8601 형식으로 반환 (예: "2024-03-12T10:00:00.000+09:00")
+export const nowKST = () => {
+  const d = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return d.toISOString().replace("Z", "+09:00");
+};
+
 // Google API 로드 및 인증 관리
 const SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",

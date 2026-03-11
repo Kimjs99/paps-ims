@@ -62,9 +62,24 @@ export default function ClassMeasure() {
     [existingMeasurements]
   );
 
+  // 종목 선택 (학급 단위 공통)
+  const [cardioType, setCardioType] = useState("shuttle_run");
+  const [muscleType, setMuscleType] = useState("sit_up");
+  const [agilityType, setAgilityType] = useState("sprint_50m");
+
+  // 입력값 상태 (초기값에서 임시저장 복원)
+  const [formValues, setFormValues] = useState(() => {
+    const draft = localStorage.getItem(`paps_draft_${classId}_${schoolYear}`);
+    if (draft) {
+      try { return JSON.parse(draft); } catch { /* ignore */ }
+    }
+    return {};
+  });
+
   // 저장된 측정값을 폼에 반영 (localStorage 초안 없는 학생만)
   useEffect(() => {
     if (!Object.keys(existingMeasurements).length) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormValues((prev) => {
       const next = { ...prev };
       Object.entries(existingMeasurements).forEach(([sid, m]) => {
@@ -86,21 +101,7 @@ export default function ClassMeasure() {
       if (first.muscle_type) setMuscleType(first.muscle_type);
       if (first.agility_type) setAgilityType(first.agility_type);
     }
-  }, [existingMeasurements]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 종목 선택 (학급 단위 공통)
-  const [cardioType, setCardioType] = useState("shuttle_run");
-  const [muscleType, setMuscleType] = useState("sit_up");
-  const [agilityType, setAgilityType] = useState("sprint_50m");
-
-  // 입력값 상태 (초기값에서 임시저장 복원)
-  const [formValues, setFormValues] = useState(() => {
-    const draft = localStorage.getItem(`paps_draft_${classId}_${schoolYear}`);
-    if (draft) {
-      try { return JSON.parse(draft); } catch { /* ignore */ }
-    }
-    return {};
-  });
+  }, [existingMeasurements]);
 
   const handleChange = (studentId, field, value) => {
     const next = {

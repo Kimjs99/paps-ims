@@ -1,4 +1,4 @@
-import { sheetsRequest, withRetry } from "./sheetsClient";
+import { sheetsRequest, withRetry, nowKST } from "./sheetsClient";
 import { SHEET_NAMES } from "../constants/paps";
 
 // 행 배열 → 학생 객체 변환 (birth_date 없음, 9컬럼)
@@ -11,14 +11,14 @@ const rowToStudent = (row) => ({
   height: Number(row[5]) || 0,
   weight: Number(row[6]) || 0,
   created_at: row[7] || "",
-  is_active: row[8] !== "false",
+  is_active: String(row[8]).toLowerCase() !== "false",
 });
 
 // 학생 객체 → 행 배열 변환
 const studentToRow = (s) => [
   s.student_id, s.name, s.gender, s.grade, s.class,
   s.height, s.weight,
-  s.created_at || new Date().toISOString(), s.is_active ?? true,
+  s.created_at || nowKST(), s.is_active ?? true,
 ];
 
 // 전체 학생 목록 조회

@@ -73,7 +73,9 @@ export default function App() {
           {/* Dashboard */}
           <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
           <Route path="/dashboard/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
+          <Route path="/dashboard/class" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
           <Route path="/dashboard/class/:classId" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
+          <Route path="/dashboard/student" element={<ProtectedRoute><StudentDetail /></ProtectedRoute>} />
           <Route path="/dashboard/student/:studentId" element={<ProtectedRoute><StudentDetail /></ProtectedRoute>} />
           <Route path="/dashboard/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
           {/* 기본 리디렉션 */}
