@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
 import { useSettingsStore } from "./store/settingsStore";
+import { Toaster } from "./components/ui/Toaster";
 
 // App 페이지
 import Onboarding from "./pages/app/Onboarding";
@@ -19,6 +20,14 @@ import StudentDetail from "./pages/dashboard/StudentDetail";
 import Report from "./pages/dashboard/Report";
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (error?.message === "AUTH_EXPIRED") {
+        useAuthStore.getState().clearUser();
+        window.location.href = "/onboarding";
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30 * 1000,
@@ -61,6 +70,7 @@ export default function App() {
           {/* 기본 리디렉션 */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Toaster />
       </BrowserRouter>
     </QueryClientProvider>
   );
