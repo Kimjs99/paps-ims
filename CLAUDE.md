@@ -60,15 +60,22 @@ VITE_GOOGLE_API_KEY     — Sheets API 키 (웹사이트 제한 + Sheets API 제
 VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 ```
 
+## 주요 주의사항 (버그 경험)
+
+- **앱 시작 시 `initGoogleAuth()` 필수**: `App.jsx` useEffect에서 호출. 누락 시 새로고침 후 `AUTH_NOT_INITIALIZED` 오류
+- **Sheets API 불리언 반환값**: `"true"` 문자열이 아닌 `"TRUE"` (대문자) 또는 `true` (boolean)로 반환됨 → `String(v).toLowerCase() === "true"` 패턴 사용
+- **Radix Select + react-hook-form `reset()`**: `reset()` 대신 `setValue()` 사용, Select에 `key={field.value}` 추가
+- **grades_standard staleTime**: 5분으로 설정. Apps Script로 데이터 변경 후 F5 새로고침 필요
+
 ## 개발 단계 참조
 
 `../files/` 디렉토리에 단계별 스펙 파일이 있음. 코드 작성 전 해당 Phase 파일 반드시 참조.
 
-| 파일 | 내용 |
-|------|------|
-| `02_webapp_input.md` | Phase 2 — 학생 관리, 측정 입력, Zod 스키마 |
-| `03_dashboard_basic.md` | Phase 3 — 대시보드 |
-| `04_analytics.md` | Phase 4 — 분석 고도화 |
-| `05_report_export.md` | Phase 5 — 보고서 출력 |
-| `06_schema_mgmt.md` | Phase 6 — 스키마 버전 관리 |
-| `07_qa_deploy.md` | Phase 7 — QA·배포 |
+| 파일 | 내용 | 상태 |
+|------|------|------|
+| `02_webapp_input.md` | Phase 2 — 학생 관리, 측정 입력, Zod 스키마 | ✅ 완료 |
+| `03_dashboard_basic.md` | Phase 3 — 대시보드 | 🔲 |
+| `04_analytics.md` | Phase 4 — 분석 고도화 | 🔲 |
+| `05_report_export.md` | Phase 5 — 보고서 출력 | 🔲 |
+| `06_schema_mgmt.md` | Phase 6 — 스키마 버전 관리 | 🔲 |
+| `07_qa_deploy.md` | Phase 7 — QA·배포 | 🔲 |
