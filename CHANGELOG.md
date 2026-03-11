@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.0] - 2026-03-11
+
+### ✨ Features
+- Phase 2 입력 시스템 완성 — 학급 측정, 상세 측정, 학생 관리, 설정 페이지 구현 (5133a8b)
+- CSV 템플릿 다운로드 버튼 추가 (24874a9)
+- 기존 저장된 측정값 폼 자동 복원 (ClassMeasure, StudentMeasure) (24874a9)
+
+### 🐛 Bug Fixes
+- 새로고침 후 AUTH_NOT_INITIALIZED 오류 수정 — 앱 시작 시 initGoogleAuth 호출 (24874a9)
+- grades_standard higher_is_better 파싱 수정 — Sheets API 대문자 TRUE/FALSE 처리 (24874a9)
+- Select 종목 표시 오류 수정 — key prop으로 강제 리마운트 (24874a9)
+- 등록 실패 에러 메시지 구체화 (24874a9)
+- grades_standard staleTime 1시간 → 5분으로 단축 (24874a9)
+
+### ✅ Tests
+- Vitest 환경 구성 및 테스트 165개 추가, 커버리지 82% (9d97121)
+
+### 📝 Documentation
+- CLAUDE.md 추가 — 개발 환경, 아키텍처, Sheets 스키마 규칙 (e9f15a2)
+
+### 🔧 Chores
+- coverage 디렉토리 gitignore 추가 (960caa3)
+
 ## [v0.1.0] - 2026-03-10
 
 ### ✨ Features
