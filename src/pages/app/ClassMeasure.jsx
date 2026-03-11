@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, Save, Loader2, AlertCircle } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
@@ -48,11 +48,45 @@ export default function ClassMeasure() {
     [students, grade, cls]
   );
 
-  // 이미 측정된 학생 ID 목록 (현재 학년도)
+  // 이미 측정된 학생 맵 (현재 학년도)
+  const existingMeasurements = useMemo(() => {
+    const map = {};
+    measurements
+      .filter((m) => m.year === schoolYear)
+      .forEach((m) => { map[m.student_id] = m; });
+    return map;
+  }, [measurements, schoolYear]);
+
   const measuredIds = useMemo(
-    () => new Set(measurements.filter((m) => m.year === schoolYear).map((m) => m.student_id)),
-    [measurements, schoolYear]
+    () => new Set(Object.keys(existingMeasurements)),
+    [existingMeasurements]
   );
+
+  // 저장된 측정값을 폼에 반영 (localStorage 초안 없는 학생만)
+  useEffect(() => {
+    if (!Object.keys(existingMeasurements).length) return;
+    setFormValues((prev) => {
+      const next = { ...prev };
+      Object.entries(existingMeasurements).forEach(([sid, m]) => {
+        if (!next[sid]) {
+          next[sid] = {
+            cardio_value: m.cardio_value ?? "",
+            muscle_value: m.muscle_value ?? "",
+            flexibility_value: m.flexibility_value ?? "",
+            agility_value: m.agility_value ?? "",
+          };
+        }
+      });
+      return next;
+    });
+    // 저장된 종목 타입 복원
+    const first = Object.values(existingMeasurements)[0];
+    if (first) {
+      if (first.cardio_type) setCardioType(first.cardio_type);
+      if (first.muscle_type) setMuscleType(first.muscle_type);
+      if (first.agility_type) setAgilityType(first.agility_type);
+    }
+  }, [existingMeasurements]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 종목 선택 (학급 단위 공통)
   const [cardioType, setCardioType] = useState("shuttle_run");

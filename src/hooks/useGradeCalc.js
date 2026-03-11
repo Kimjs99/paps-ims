@@ -5,7 +5,7 @@ import { SHEET_NAMES } from "../constants/paps";
 import { calcGrade, calcTotalGrade } from "../utils/gradeCalc";
 import { calcBMI, calcBMIGrade } from "../utils/bmiCalc";
 
-// grades_standard 시트 조회 (staleTime 1시간)
+// grades_standard 시트 조회 (staleTime 5분)
 export const useGradesStandard = () => {
   const sheetId = useSettingsStore((s) => s.sheetId);
   return useQuery({
@@ -23,11 +23,11 @@ export const useGradesStandard = () => {
         grade3_min: Number(row[5]),
         grade4_min: Number(row[6]),
         grade5_min: Number(row[7]),
-        higher_is_better: row[8] === "true",
+        higher_is_better: String(row[8]).toLowerCase() === "true",
       }));
     },
     enabled: !!sheetId,
-    staleTime: 60 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 };
 

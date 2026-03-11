@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -5,7 +6,7 @@ import { ChevronLeft, Save, Loader2 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
-import { useStudents, useSaveMeasurement } from "../../hooks/useSheets";
+import { useStudents, useMeasurements, useSaveMeasurement } from "../../hooks/useSheets";
 import { useCalculateGrades } from "../../hooks/useGradeCalc";
 import { measurementSchema } from "../../utils/validators";
 import { calcBMI } from "../../utils/bmiCalc";
@@ -35,11 +36,12 @@ export default function StudentMeasure() {
   const { user } = useAuthStore();
   const { schoolYear } = useSettingsStore();
   const { data: students = [] } = useStudents();
+  const { data: measurements = [] } = useMeasurements();
   const saveMutation = useSaveMeasurement();
 
   const student = students.find((s) => s.student_id === studentId);
 
-  const { control, handleSubmit, watch, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(measurementSchema),
     defaultValues: {
       cardio_type: "shuttle_run",
@@ -51,6 +53,21 @@ export default function StudentMeasure() {
       agility_value: null,
     },
   });
+
+  // 기존 저장된 측정값으로 폼 초기화 (setValue로 개별 설정)
+  useEffect(() => {
+    const existing = measurements.find(
+      (m) => m.student_id === studentId && m.year === schoolYear
+    );
+    if (!existing) return;
+    setValue("cardio_type", existing.cardio_type || "shuttle_run");
+    setValue("cardio_value", existing.cardio_value ?? null);
+    setValue("muscle_type", existing.muscle_type || "sit_up");
+    setValue("muscle_value", existing.muscle_value ?? null);
+    setValue("flexibility_value", existing.flexibility_value ?? null);
+    setValue("agility_type", existing.agility_type || "sprint_50m");
+    setValue("agility_value", existing.agility_value ?? null);
+  }, [measurements, studentId, schoolYear, setValue]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValues = watch();
@@ -121,7 +138,7 @@ export default function StudentMeasure() {
                 <div className="space-y-1">
                   <Label>종목</Label>
                   <Controller name="cardio_type" control={control} render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select key={field.value} value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {CARDIO_TYPES.map((t) => (
@@ -152,7 +169,7 @@ export default function StudentMeasure() {
                 <div className="space-y-1">
                   <Label>종목</Label>
                   <Controller name="muscle_type" control={control} render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select key={field.value} value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {MUSCLE_TYPES.map((t) => (
@@ -200,7 +217,7 @@ export default function StudentMeasure() {
                 <div className="space-y-1">
                   <Label>종목</Label>
                   <Controller name="agility_type" control={control} render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select key={field.value} value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {AGILITY_TYPES.map((t) => (

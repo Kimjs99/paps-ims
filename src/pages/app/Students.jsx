@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { Search, UserPlus, Upload, Loader2 } from "lucide-react";
+import { Search, UserPlus, Upload, Download, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { v4 as uuidv4 } from "uuid";
@@ -118,8 +118,9 @@ export default function Students() {
       await addStudent.mutateAsync({ ...data, student_id: data.student_id || uuidv4() });
       toast.success(`${data.name} 학생이 등록됐습니다.`);
       setDialogOpen(false);
-    } catch {
-      toast.error("등록에 실패했습니다.");
+    } catch (err) {
+      console.error("[addStudent]", err);
+      toast.error(`등록 실패: ${err?.message || "알 수 없는 오류"}`);
     }
   };
 
@@ -144,14 +145,30 @@ export default function Students() {
     reader.readAsText(file);
   };
 
+  const handleCsvTemplateDownload = () => {
+    const header = "student_id,name,gender,grade,class,height,weight";
+    const examples = [
+      "20240101,홍길동,M,1,1,165,58",
+      "20240102,김영희,F,1,1,158,52",
+    ].join("\n");
+    const blob = new Blob([`${header}\n${examples}\n`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "students_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleCsvUpload = async () => {
     if (!csvPreview) return;
     try {
       await bulkAdd.mutateAsync(csvPreview);
       toast.success(`${csvPreview.length}명이 등록됐습니다.`);
       setCsvPreview(null);
-    } catch {
-      toast.error("일괄 등록에 실패했습니다.");
+    } catch (err) {
+      console.error("[bulkAddStudents]", err);
+      toast.error(`일괄 등록 실패: ${err?.message || "알 수 없는 오류"}`);
     }
   };
 
@@ -160,6 +177,9 @@ export default function Students() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">학생 관리</h1>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleCsvTemplateDownload}>
+            <Download className="h-4 w-4" /> 템플릿
+          </Button>
           <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
             <Upload className="h-4 w-4" /> CSV 업로드
           </Button>

@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
 import { useSettingsStore } from "./store/settingsStore";
+import { initGoogleAuth } from "./api/sheetsClient";
 import { Toaster } from "./components/ui/Toaster";
 
 // App 페이지
@@ -50,6 +52,13 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+  // 새로고침 후에도 tokenClient가 초기화되도록 앱 시작 시 GIS 초기화
+  useEffect(() => {
+    initGoogleAuth().catch(() => {
+      // GIS 스크립트 미로드 시 무시 (온보딩에서 재시도)
+    });
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
