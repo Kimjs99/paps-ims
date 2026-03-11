@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.1] - 2026-03-11
+
+### 📝 Documentation
+- CLAUDE.md 주의사항 추가 및 Phase 진행 상태 업데이트, 테스트 명령어 추가 (12787f5)
+
+### 🔧 Chores
+- Vite 템플릿 잔재 파일 정리 및 파비콘 수정 (61f0607)
+
 ## [v0.2.0] - 2026-03-11
 
 ### ✨ Features
