@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.1] - 2026-03-12
+
+### 💄 Style
+- GradeDistributionChart Y축 `~명` 단위 추가 (d57fe9b)
+- YearlyTrendChart·BmiScatterChart 상단 여백 추가 — 1등급 레이블 잘림 수정 (d57fe9b)
+- GenderComparisonChart Y축 `~등급` 전체 표기, 막대 위 소수점 1자리 수치 표기 (d57fe9b)
+
 ## [v0.3.0] - 2026-03-12
 
 ### ✨ Features
