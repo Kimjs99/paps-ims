@@ -26,7 +26,7 @@ export function BmiScatterChart({ data }) {
     <div className="bg-white rounded-xl border p-4">
       <h3 className="text-sm font-semibold text-gray-700 mb-4">BMI vs 종합 등급 상관관계</h3>
       <ResponsiveContainer width="100%" height={260}>
-        <ScatterChart>
+        <ScatterChart margin={{ top: 20, right: 8, left: 0, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="bmi"

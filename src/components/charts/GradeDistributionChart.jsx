@@ -18,7 +18,7 @@ export function GradeDistributionChart({ data }) {
         <BarChart data={data} barSize={36}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="grade" tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+          <YAxis tick={{ fontSize: 12 }} allowDecimals={false} tickFormatter={(v) => `${v}명`} />
           <Tooltip formatter={(v) => [`${v}명`, "학생 수"]} />
           <Bar dataKey="count" radius={[4, 4, 0, 0]}>
             {data.map((entry) => (

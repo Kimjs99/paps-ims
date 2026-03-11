@@ -52,7 +52,7 @@ export function YearlyTrendChart({
   const chart = (
     <>
       <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data}>
+        <LineChart data={data} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey={xKey} tick={{ fontSize: 11 }} />
           <YAxis
