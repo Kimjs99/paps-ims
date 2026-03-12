@@ -58,7 +58,7 @@ export default function Report() {
     return classes.sort((a, b) => Number(a) - Number(b));
   }, [activeStudents, filterGrade]);
 
-  // 필터 적용된 측정 데이터
+  // 필터 적용된 측정 데이터 (deduped — 카운트 표시용)
   const filteredMeasurements = useMemo(() => {
     let m = deduped;
     if (filterYear) m = m.filter((x) => String(x.year) === filterYear);
@@ -73,6 +73,37 @@ export default function Report() {
     }
     return m;
   }, [deduped, activeStudents, filterYear, filterGrade, filterClass]);
+
+  // 보고서용: 원시 측정값에서 학생별 평균 등급 산출 (최우수 병합 없음)
+  const REPORT_GRADE_KEYS = ["cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade"];
+  const reportMeasurements = useMemo(() => {
+    let raw = measurements;
+    if (filterYear) raw = raw.filter((m) => String(m.year) === filterYear);
+    if (filterGrade || filterClass) {
+      raw = raw.filter((m) => {
+        const s = activeStudents.find((st) => st.student_id === m.student_id);
+        if (!s) return false;
+        if (filterGrade && String(s.grade) !== filterGrade) return false;
+        if (filterClass && String(s.class) !== filterClass) return false;
+        return true;
+      });
+    }
+    const groups = new Map();
+    raw.forEach((m) => {
+      if (!groups.has(m.student_id)) groups.set(m.student_id, []);
+      groups.get(m.student_id).push(m);
+    });
+    return Array.from(groups.entries()).map(([student_id, records]) => {
+      const result = { student_id };
+      REPORT_GRADE_KEYS.forEach((key) => {
+        const vals = records.map((r) => Number(r[key])).filter((v) => v >= 1 && v <= 5);
+        result[key] = vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+      });
+      const totals = records.map((r) => Number(r.total_grade)).filter((v) => v >= 1 && v <= 5);
+      result.total_grade = totals.length > 0 ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : null;
+      return result;
+    });
+  }, [measurements, activeStudents, filterYear, filterGrade, filterClass]);
 
   // 필터 적용된 학생 목록
   const filteredStudents = useMemo(() => {
@@ -116,8 +147,8 @@ export default function Report() {
     [filteredStudents, selectedStudentId]
   );
   const selectedStudentMeasurements = useMemo(
-    () => deduped.filter((m) => m.student_id === selectedStudentId),
-    [deduped, selectedStudentId]
+    () => measurements.filter((m) => m.student_id === selectedStudentId),
+    [measurements, selectedStudentId]
   );
 
   const handleSingleCardExport = async () => {
@@ -261,7 +292,7 @@ export default function Report() {
               <div className="overflow-auto border rounded-xl bg-gray-100 p-4">
                 <div className="shadow-sm mx-auto" style={{ width: "fit-content" }}>
                   <ClassReportPreview
-                    measurements={filteredMeasurements}
+                    measurements={reportMeasurements}
                     students={activeStudents}
                     schoolName={schoolName}
                     schoolYear={filterYear || schoolYear}
@@ -381,7 +412,7 @@ export default function Report() {
               key={s.student_id}
               id={`batch-card-${s.student_id}`}
               student={s}
-              measurements={deduped.filter((m) => m.student_id === s.student_id)}
+              measurements={measurements.filter((m) => m.student_id === s.student_id)}
               schoolName={schoolName}
               schoolYear={filterYear || schoolYear}
             />
@@ -393,7 +424,7 @@ export default function Report() {
       <div className="print-only hidden">
         {activeTab === "class" && (
           <ClassReportPreview
-            measurements={filteredMeasurements}
+            measurements={reportMeasurements}
             students={activeStudents}
             schoolName={schoolName}
             schoolYear={filterYear || schoolYear}

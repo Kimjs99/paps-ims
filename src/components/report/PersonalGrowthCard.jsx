@@ -30,32 +30,54 @@ function GradeBadge({ label, grade }) {
   );
 }
 
+const GRADE_KEYS = ["cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade", "total_grade"];
+
+function avgGrade(measurements, key) {
+  const vals = measurements.map((m) => Number(m[key])).filter((v) => v >= 1 && v <= 5);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
 export function PersonalGrowthCard({ student, measurements, schoolName, schoolYear, id }) {
-  // 최신 측정 데이터
-  const latest = useMemo(() => {
+  // 전체 연도 평균 등급
+  const avgGrades = useMemo(() => {
     if (!measurements.length) return null;
-    return [...measurements].sort((a, b) => (b.year ?? 0) - (a.year ?? 0))[0];
+    return Object.fromEntries(GRADE_KEYS.map((key) => [key, avgGrade(measurements, key)]));
   }, [measurements]);
 
-  // 레이더 차트 데이터
+  // 등급 표시용 반올림값
+  const roundedGrades = useMemo(() => {
+    if (!avgGrades) return null;
+    return Object.fromEntries(
+      Object.entries(avgGrades).map(([key, val]) => [key, val !== null ? Math.round(val) : null])
+    );
+  }, [avgGrades]);
+
+  // 레이더 차트 데이터 (평균 등급 기반)
   const radarData = useMemo(() => {
-    if (!latest) return AREA_KEYS.map((a) => ({ area: a.area, display: 0, value: null }));
+    if (!avgGrades) return AREA_KEYS.map((a) => ({ area: a.area, display: 0, value: null }));
     return AREA_KEYS.map((a) => ({
       area: a.area,
-      value: latest[a.key] ? Number(latest[a.key]) : null,
-      display: latest[a.key] ? 6 - Number(latest[a.key]) : 0,
+      value: avgGrades[a.key],
+      display: avgGrades[a.key] !== null ? 6 - avgGrades[a.key] : 0,
     }));
-  }, [latest]);
+  }, [avgGrades]);
 
-  // 연도별 종합 등급 추이
+  // 연도별 종합 등급 추이 (연도별 평균)
   const yearlyTrend = useMemo(() => {
     const byYear = new Map();
     measurements.forEach((m) => {
-      if (!byYear.has(m.year) || m.total_grade) byYear.set(m.year, m.total_grade);
+      if (!m.year) return;
+      if (!byYear.has(m.year)) byYear.set(m.year, []);
+      const g = Number(m.total_grade);
+      if (g >= 1 && g <= 5) byYear.get(m.year).push(g);
     });
     return [...byYear.entries()]
       .sort((a, b) => a[0] - b[0])
-      .map(([year, grade]) => ({ year, grade }));
+      .map(([year, grades]) => ({
+        year,
+        grade: grades.length > 0 ? Math.round(grades.reduce((a, b) => a + b, 0) / grades.length) : null,
+      }));
   }, [measurements]);
 
   if (!student) return null;
@@ -82,25 +104,25 @@ export function PersonalGrowthCard({ student, measurements, schoolName, schoolYe
             {student.grade}학년 {student.class}반 ({student.gender === "M" ? "남" : "여"})
           </span>
         </div>
-        {latest?.total_grade && (
+        {roundedGrades?.total_grade && (
           <div
             className="text-center px-4 py-2 rounded-lg text-white"
-            style={{ backgroundColor: GRADE_COLORS[latest.total_grade] }}
+            style={{ backgroundColor: GRADE_COLORS[roundedGrades.total_grade] }}
           >
-            <div className="text-xs">종합</div>
-            <div className="text-2xl font-black">{latest.total_grade}등급</div>
-            <div className="text-xs opacity-90">{GRADE_LABELS[latest.total_grade]}</div>
+            <div className="text-xs">종합 평균</div>
+            <div className="text-2xl font-black">{roundedGrades.total_grade}등급</div>
+            <div className="text-xs opacity-90">{GRADE_LABELS[roundedGrades.total_grade]}</div>
           </div>
         )}
       </div>
 
-      {/* 영역별 등급 배지 */}
+      {/* 영역별 평균 등급 배지 */}
       <div className="flex gap-2 flex-wrap justify-center mb-4">
         {AREA_KEYS.map((a) => (
           <GradeBadge
             key={a.key}
             label={a.area}
-            grade={latest ? Number(latest[a.key]) || null : null}
+            grade={roundedGrades ? roundedGrades[a.key] : null}
           />
         ))}
       </div>
@@ -141,7 +163,7 @@ export function PersonalGrowthCard({ student, measurements, schoolName, schoolYe
         </div>
       )}
 
-      {!latest && (
+      {!avgGrades && (
         <p className="text-center text-gray-400 text-sm py-4">측정 데이터가 없습니다.</p>
       )}
     </div>
