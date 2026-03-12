@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.0] - 2026-03-13
+
+### ✨ Features
+- 보고서 개인 기록 평균값 산출 — PersonalGrowthCard·ClassReportPreview 최우수 병합 → 전체 측정 평균 등급으로 변경 (4f2c6a6)
+
+### 📝 Documentation
+- CLAUDE.md 업데이트 — Phase 5 완료 반영, utils/컴포넌트 서브디렉토리 구조 추가 (207900b)
+
 ## [v0.4.0] - 2026-03-12
 
 ### ✨ Features
