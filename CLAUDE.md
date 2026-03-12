@@ -101,6 +101,24 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 
 - **dev/build 명령**: 반드시 `bun run dev` / `bun run build` 사용 — `vite` 직접 실행 시 `--configLoader native` 옵션 필요
 - **무한 로딩 발생 시**: zombie esbuild 프로세스 누적 문제 → `ps aux | grep esbuild | grep UE` 로 확인 → UE 상태 프로세스 발견 시 **Mac 재부팅** 필요 (SIGKILL로 제거 불가)
+- **서버 재시작**: `lsof -ti:5174 | xargs kill -9` 로 포트 정리 후 `bun run dev`
+
+## 유틸리티 (`src/utils/`)
+
+- `bmiCalc.js` — BMI 계산 및 등급 판정
+- `gradeCalc.js` — 체력요소별 등급 계산 (grades_standard 기준)
+- `validators.js` — Zod 스키마 기반 측정값 유효성 검사
+- `pdfExport.js` — `exportElementToPdf(elementId, filename)` — DOM → jsPDF 변환
+- `excelExport.js` — `exportMeasurementsToExcel()` — xlsx 원시 데이터 내보내기
+
+## 컴포넌트 서브디렉토리 (`src/components/`)
+
+- `ui/` — shadcn/ui 래퍼 컴포넌트 (수정 금지)
+- `layout/` — 공통 레이아웃 (Router 종속)
+- `dashboard/` — KpiCard, DashboardFilters, GradeQuickFilter, LastUpdatedBar, PollingIndicator
+- `charts/` — 대시보드용 Recharts 차트 컴포넌트
+- `measurement/` — MeasurementStatusBadge 등 측정 입력 관련
+- `report/` — ClassReportPreview, PersonalGrowthCard, RawDataExport
 
 ## 주요 주의사항 (버그 경험)
 
@@ -120,6 +138,6 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 | `02_webapp_input.md` | Phase 2 — 학생 관리, 측정 입력, Zod 스키마 | ✅ 완료 |
 | `03_dashboard_basic.md` | Phase 3 — 대시보드 기본 | ✅ 완료 |
 | `04_analytics.md` | Phase 4 — 분석 고도화 | ✅ 완료 |
-| `05_report_export.md` | Phase 5 — 보고서 출력 | 🔲 |
+| `05_report_export.md` | Phase 5 — 보고서 출력 | ✅ 완료 |
 | `06_schema_mgmt.md` | Phase 6 — 스키마 버전 관리 | 🔲 |
 | `07_qa_deploy.md` | Phase 7 — QA·배포 | 🔲 |
