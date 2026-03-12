@@ -54,6 +54,23 @@ KPI / 차트 계산
 - 등급 체계: **1등급이 최우수, 5등급이 최하** (낮을수록 좋음) — 차트 Y축 반전 또는 값 반전(`6 - grade`) 필요
 - 대시보드 필터는 URL 쿼리 파라미터(`useSearchParams`) 기반 — `useDashboardFilters()` 훅으로 읽음
 
+## 보고서 데이터 파이프라인
+
+보고서(`/dashboard/report`)는 대시보드와 달리 **최우수 병합이 아닌 평균값** 기반이다.
+
+```
+raw measurements (원시 전체)
+        ↓
+필터(year/grade/class) 적용
+        ↓
+student_id별 그룹핑 → 체력요소별 평균 등급(Math.round) → reportMeasurements
+        ↓
+ClassReportPreview / PersonalGrowthCard
+```
+
+- `deduplicateMeasurements()`를 보고서에 사용하면 최우수 병합이 발생해 데이터가 왜곡됨 — **보고서에는 절대 사용 금지**
+- `PersonalGrowthCard`의 `yearlyTrend`도 연도별 평균 total_grade를 표시
+
 ## Google Sheets 스키마 규칙
 
 - **시트 탭 이름은 영문 고정**: `students`, `measurements`, `grades_standard`, `settings`, `changelog` — 코드가 `SHEET_NAMES` 상수로 직접 참조
