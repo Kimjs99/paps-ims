@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.0] - 2026-03-12
+
+### ✨ Features
+- Phase 5 보고서 출력 구현 — jsPDF, html2canvas, xlsx 기반 PDF·엑셀 내보내기 (5690f27)
+
+### 📝 Documentation
+- README.md 추가 (b9290e2)
+
 ## [v0.3.1] - 2026-03-12
 
 ### 💄 Style

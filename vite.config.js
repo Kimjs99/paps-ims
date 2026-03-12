@@ -13,10 +13,6 @@ export default defineConfig({
       "@": "/src",
     },
   },
-  optimizeDeps: {
-    // 좀비 esbuild 프로세스 간섭 우회 — dep 최적화 비활성화
-    disabled: true,
-  },
   build: {
     chunkSizeWarningLimit: 3000,
   },
