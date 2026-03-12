@@ -97,6 +97,11 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - `react-hooks/set-state-in-effect`: useEffect 내부에서 setState 직접 호출 금지 — 초기값은 `state ?? derivedDefault` 패턴으로 render-time에 파생
 - `react-refresh/only-export-components`: 훅과 컴포넌트를 같은 파일에서 export하면 경고 — 훅은 별도 파일로 분리
 
+## 개발 서버 관련 주의사항
+
+- **dev/build 명령**: 반드시 `bun run dev` / `bun run build` 사용 — `vite` 직접 실행 시 `--configLoader native` 옵션 필요
+- **무한 로딩 발생 시**: zombie esbuild 프로세스 누적 문제 → `ps aux | grep esbuild | grep UE` 로 확인 → UE 상태 프로세스 발견 시 **Mac 재부팅** 필요 (SIGKILL로 제거 불가)
+
 ## 주요 주의사항 (버그 경험)
 
 - **앱 시작 시 `initGoogleAuth()` 필수**: `App.jsx` useEffect에서 호출. 누락 시 새로고침 후 `AUTH_NOT_INITIALIZED` 오류

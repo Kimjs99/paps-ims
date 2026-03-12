@@ -59,3 +59,11 @@
     min-height: 100vh;
   }
 }
+
+@media print {
+  .print-hidden { display: none !important; }
+  .print-only { display: block !important; }
+  .print-break-before { break-before: page; }
+  .print-break-after { break-after: page; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
