@@ -24,12 +24,15 @@ export const exportElementToPdf = async (elementId, filename) => {
   pdf.save(filename);
 };
 
-// 다중 페이지 PDF (학급 보고서)
+// 다중 페이지 PDF (학급 보고서) — 콘텐츠가 A4 높이 초과 시 자동 분할
 export const exportMultiPagePdf = async (pageElementIds, filename) => {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageWidth = pdf.internal.pageSize.getWidth();   // 210mm
+  const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
+  let isFirstPage = true;
 
-  for (let i = 0; i < pageElementIds.length; i++) {
-    const element = document.getElementById(pageElementIds[i]);
+  for (const elementId of pageElementIds) {
+    const element = document.getElementById(elementId);
     if (!element) continue;
 
     const canvas = await html2canvas(element, {
@@ -39,12 +42,25 @@ export const exportMultiPagePdf = async (pageElementIds, filename) => {
       useCORS: true,
     });
     const imgData = canvas.toDataURL("image/png");
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * pageWidth) / canvas.width;
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    if (!isFirstPage) pdf.addPage();
+    isFirstPage = false;
 
-    if (i > 0) pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    if (imgHeight <= pageHeight) {
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+    } else {
+      // 콘텐츠가 한 페이지를 초과하면 슬라이딩 방식으로 분할
+      let remaining = imgHeight;
+      let offset = 0;
+      while (remaining > 0) {
+        pdf.addImage(imgData, "PNG", 0, -offset, imgWidth, imgHeight);
+        remaining -= pageHeight;
+        offset += pageHeight;
+        if (remaining > 0) pdf.addPage();
+      }
+    }
   }
 
   pdf.save(filename);

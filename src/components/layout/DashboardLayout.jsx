@@ -60,7 +60,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
-      <header className="bg-white border-b sticky top-0 z-40">
+      <header className="bg-white border-b sticky top-0 z-40 print-hidden">
         <div className="px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="font-bold text-blue-600 text-lg">
@@ -107,7 +107,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
 
       <div className="flex flex-1">
         {/* 데스크톱 사이드바 */}
-        <aside className="hidden md:flex flex-col w-52 bg-white border-r py-4 px-3 gap-1 sticky top-14 h-[calc(100vh-3.5rem)]">
+        <aside className="hidden md:flex flex-col w-52 bg-white border-r py-4 px-3 gap-1 sticky top-14 h-[calc(100vh-3.5rem)] print-hidden">
           {sidebarItems.map((item) => (
             <NavItem key={item.to} {...item} location={location} />
           ))}
@@ -118,7 +118,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
       </div>
 
       {/* 모바일 하단 탭바 */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40 print-hidden">
         <div className="flex">
           {sidebarItems.map((item) => {
             const isActive = item.exact
