@@ -19,7 +19,6 @@ export const initGoogleAuth = () => {
       reject(new Error("Google Identity Services 로드 실패. 네트워크를 확인하세요."));
       return;
     }
-    console.log("[GIS] client_id prefix:", import.meta.env.VITE_GOOGLE_CLIENT_ID?.slice(0, 12));
     tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       scope: SCOPES,
@@ -60,10 +59,9 @@ export const requestAccessToken = () => {
       resolve(tokenResponse);
     };
     tokenClient.error_callback = (error) => {
-      console.error("[GIS error_callback]", JSON.stringify(error));
       reject(new Error(error?.type || "OAUTH_ERROR"));
     };
-    tokenClient.requestAccessToken({ prompt: "select_account" });
+    tokenClient.requestAccessToken({ prompt: "consent" });
   });
 };
 
