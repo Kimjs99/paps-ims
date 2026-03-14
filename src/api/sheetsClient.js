@@ -59,6 +59,7 @@ export const requestAccessToken = () => {
       resolve(tokenResponse);
     };
     tokenClient.error_callback = (error) => {
+      console.error("[GIS error_callback]", JSON.stringify(error));
       reject(new Error(error?.type || "OAUTH_ERROR"));
     };
     tokenClient.requestAccessToken({ prompt: "consent" });
