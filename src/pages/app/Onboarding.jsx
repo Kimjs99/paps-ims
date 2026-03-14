@@ -74,8 +74,8 @@ export default function Onboarding() {
       const userInfo = await userInfoRes.json();
       setUser({ email: userInfo.email, name: userInfo.name, picture: userInfo.picture });
       setStep(2);
-    } catch {
-      setError("Google 로그인에 실패했습니다. 다시 시도해주세요.");
+    } catch (e) {
+      setError(`로그인 실패: ${e?.message || String(e)}`);
     } finally {
       setLoading(false);
     }
