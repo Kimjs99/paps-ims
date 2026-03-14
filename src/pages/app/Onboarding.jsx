@@ -75,7 +75,12 @@ export default function Onboarding() {
       setUser({ email: userInfo.email, name: userInfo.name, picture: userInfo.picture });
       setStep(2);
     } catch (e) {
-      setError(`로그인 실패: ${e?.message || String(e)}`);
+      const msg = e?.message || "";
+      if (msg === "popup_closed") {
+        setError("로그인 팝업이 닫혔습니다. 팝업을 허용한 후 다시 시도해주세요.");
+      } else {
+        setError("Google 로그인에 실패했습니다. 다시 시도해주세요.");
+      }
     } finally {
       setLoading(false);
     }
