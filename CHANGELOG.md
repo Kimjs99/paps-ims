@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.3] - 2026-03-14
+
+### 🐛 Bug Fixes
+- GIS `requestAccessToken` `error_callback` 누락으로 OAuth 팝업 닫힘 시 로그인 버튼 loading 고착 수정 (e54d204)
+- `getValidToken` silent refresh에도 동일하게 `error_callback` 추가 (e54d204)
+
 ## [v0.6.2] - 2026-03-14
 
 ### 🐛 Bug Fixes
