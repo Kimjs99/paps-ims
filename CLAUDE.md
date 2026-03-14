@@ -7,11 +7,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 bun run dev           # 개발 서버 실행 — http://localhost:5174
 bun run build         # 프로덕션 빌드
+bun run preview --port 5174  # 빌드 결과 로컬 프로덕션 서버 (build 후 실행)
 bun run lint          # ESLint 실행 (경고 0개 기준 유지)
-bun run preview       # 빌드 결과 미리보기
 bun run test          # 테스트 1회 실행 (Vitest)
 bun run test:watch    # 테스트 워치 모드
 bun run test:coverage # 커버리지 리포트 (목표: 80%+)
+
+# 특정 테스트 파일 단독 실행
+bun run test src/test/students.test.js
 ```
 
 > 패키지 설치는 항상 `bun add` / `bun add -D` 사용. `npm`/`yarn` 사용 금지.
@@ -122,13 +125,13 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 ## 배포
 
 **Vercel (현재 운영)**: 프로젝트 연결 후 환경변수 3개 등록, 빌드 명령 `bun run build`, 출력 디렉토리 `dist`. `base`는 `/`(기본값) 사용.
-- SPA 라우팅은 Vercel이 자동 처리 (`public/404.html` 트릭은 GitHub Pages 전용, Vercel에서 무해)
+- SPA 라우팅은 `vercel.json` rewrites로 처리 (`public/404.html` 트릭은 Vercel에서 무해하지만 불필요)
+- main 브랜치 push 시 Vercel 자동 배포 (GitHub Actions 워크플로우 없음)
 
-**GitHub Actions (`.github/workflows/deploy.yml`)**: main 브랜치 push 시 GitHub Pages 자동 배포.
-- `vite.config.js`의 `base`는 `GITHUB_ACTIONS` 환경변수 존재 시에만 `/paps-ims/`로 설정됨
-- SPA 라우팅: `public/404.html` → `index.html` 리디렉션 트릭 적용
+**배포 후 필수**: Google Cloud Console → OAuth 클라이언트 → **승인된 JavaScript 원본**에 배포 도메인 등록.
+- 등록 누락 시 GIS 팝업이 계정 선택 후 바로 닫히며 `popup_closed` 오류 발생
 
-**공통**: 배포 후 Google Cloud Console → OAuth 클라이언트 → 승인된 JavaScript 원본에 배포 도메인 등록 필수.
+**미해결 배포 이슈 (조사 중)**: Vercel HTTPS 환경에서 GIS implicit flow 팝업이 `popup_closed`를 반환. 로컬(localhost)에서는 정상. 원인: GIS가 `accounts.google.com` COOP `same-origin`으로 인해 팝업→부모창 토큰 전달 실패. 해결 예정: `public/oauth-callback.html` + 커스텀 팝업 flow로 GIS 대체.
 
 ## ESLint 규칙 주의사항
 
@@ -175,15 +178,3 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - **아이콘 전용 버튼·링크**: `aria-label` 필수 — 없으면 스크린리더가 버튼 목적을 알 수 없음
 - **`<Progress>` 컴포넌트**: `aria-label` 필수 — Radix UI progressbar role은 accessible name이 없으면 Lighthouse 경고 발생
 
-## 개발 단계 참조
-
-`../files/` 디렉토리에 단계별 스펙 파일이 있음. 코드 작성 전 해당 Phase 파일 반드시 참조.
-
-| 파일 | 내용 | 상태 |
-|------|------|------|
-| `02_webapp_input.md` | Phase 2 — 학생 관리, 측정 입력, Zod 스키마 | ✅ 완료 |
-| `03_dashboard_basic.md` | Phase 3 — 대시보드 기본 | ✅ 완료 |
-| `04_analytics.md` | Phase 4 — 분석 고도화 | ✅ 완료 |
-| `05_report_export.md` | Phase 5 — 보고서 출력 | ✅ 완료 |
-| `06_schema_mgmt.md` | Phase 6 — 스키마 버전 관리 | ✅ 완료 |
-| `07_qa_deploy.md` | Phase 7 — QA·배포 | ✅ 완료 |
