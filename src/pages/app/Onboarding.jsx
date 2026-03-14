@@ -151,7 +151,7 @@ export default function Onboarding() {
               </span>
             ))}
           </div>
-          <Progress value={progressValue} className="h-2" />
+          <Progress value={progressValue} className="h-2" aria-label={`온보딩 진행률 ${step}단계/${STEPS.length}단계`} />
         </div>
 
         {/* 카드 */}

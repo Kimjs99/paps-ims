@@ -75,7 +75,11 @@ export const getValidToken = async () => {
       reject(new Error("AUTH_NOT_INITIALIZED"));
       return;
     }
+    const timeoutId = setTimeout(() => {
+      reject(new Error("네트워크 연결을 확인하세요. (인증 시간 초과)"));
+    }, 8000);
     tokenClient.callback = (tokenResponse) => {
+      clearTimeout(timeoutId);
       if (tokenResponse.error) {
         sessionStorage.removeItem("gapi_token");
         reject(new Error("AUTH_EXPIRED"));
@@ -108,14 +112,28 @@ export const sheetsRequest = async ({ method = "GET", path, body } = {}) => {
   const base = "https://sheets.googleapis.com/v4/spreadsheets";
   const url = `${base}${path}`;
 
-  const res = await fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error("네트워크 연결을 확인하세요. (요청 시간 초과)");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (res.status === 429) {
     const err = new Error("QUOTA_EXCEEDED");

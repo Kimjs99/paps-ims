@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.GITHUB_ACTIONS ? "/paps-ims/" : "/",
   plugins: [react()],
   server: {
     port: 5174,
@@ -15,6 +16,15 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 3000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          recharts: ["recharts"],
+          xlsx: ["xlsx"],
+          jspdf: ["jspdf", "html2canvas"],
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',

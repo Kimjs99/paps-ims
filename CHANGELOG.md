@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.0] - 2026-03-14
+
+### ✨ Features
+- Phase 6 스키마 버전 관리 구현 — `schemaMigration.js`, `useSchemaCheck.js`, `SchemaMigrationBanner` (신규)
+- Phase 7 QA·배포 구현 — ErrorBoundary, React.lazy 코드 분할, Vite manualChunks (recharts/xlsx/jspdf)
+- GitHub Actions 자동 배포 워크플로우 추가 (`.github/workflows/deploy.yml`)
+- SPA 라우팅 — `public/404.html` 리디렉션 트릭, `index.html` 경로 복원 스크립트
+- Settings 페이지 — 시스템 정보 카드 (앱 버전, 스키마 버전, Sheet ID, 버전 재확인 버튼)
+
+### 🐛 Bug Fixes
+- `getValidToken()` 8초 타임아웃 추가 — 오프라인 시 인증 무한 대기 해소
+- `sheetsRequest()` AbortController 8초 타임아웃 추가 — fetch 무한 대기 해소
+- `ClassMeasure` 오프라인 저장 후 버튼 "저장 중" 고착 — `saveBatch.reset()` 호출로 수정
+- `PersonalGrowthCard` 연도별 추이 섹션 조건 수정 (`yearlyTrend.length > 0`)
+- `PersonalGrowthCard` PDF 과도한 여백 — `minHeight: "210mm"` 제거
+
+### ✅ Tests
+- `students.test.js`, `measurements.test.js` sheetsClient mock에 `nowKST` 누락 수정 — 테스트 165개 전체 통과
+
+### 🔧 Chores
+- `vite.config.js` — CI 환경(`GITHUB_ACTIONS`) base 경로 자동 설정
+- `eslint.config.js` — `vite.config.js`에 node globals 적용 (`process` 허용)
+- `Report.jsx` — `REPORT_GRADE_KEYS` 모듈 레벨로 이동 (ESLint useMemo 경고 해소)
+
+### 📝 Documentation
+- CLAUDE.md 전면 개정 — Phase 6·7 완료 반영, 스키마 버전 관리·배포·타임아웃 섹션 추가
+- 교사 사용 가이드 (`docs/교사_사용가이드.md`) 신규 작성
+
+## [v0.5.1] - 2026-03-13
+
+### 🐛 Bug Fixes
+- 인쇄 시 사이드바·헤더 숨김, PDF 페이지 초과 콘텐츠 분할 처리 (4e56fdf)
+
+### 📝 Documentation
+- CLAUDE.md 보고서 데이터 파이프라인 섹션 추가 (c3eaaec)
+
 ## [v0.5.0] - 2026-03-13
 
 ### ✨ Features

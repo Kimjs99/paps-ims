@@ -5,6 +5,7 @@ import { getStudents, addStudent, updateStudent, bulkAddStudents } from '../api/
 vi.mock('../api/sheetsClient', () => ({
   sheetsRequest: vi.fn(),
   withRetry: vi.fn((fn) => fn()),
+  nowKST: vi.fn(() => '2024-01-01T09:00:00+09:00'),
 }));
 
 import { sheetsRequest } from '../api/sheetsClient';

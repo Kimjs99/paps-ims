@@ -123,9 +123,9 @@ export default function Home() {
             >
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-lg font-bold text-gray-900">
                     {grade}학년 {cls}반
-                  </h3>
+                  </h2>
                   <ChevronRight className="h-4 w-4 text-gray-400" />
                 </div>
                 <div className="space-y-2">
@@ -133,7 +133,7 @@ export default function Home() {
                     <span>측정 진행률</span>
                     <span className="font-semibold">{completed}/{total}명 ({progress}%)</span>
                   </div>
-                  <Progress value={progress} className="h-2" />
+                  <Progress value={progress} className="h-2" aria-label={`${grade}학년 ${cls}반 측정 진행률 ${progress}%`} />
                 </div>
                 <div className="mt-3 flex gap-2">
                   <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">

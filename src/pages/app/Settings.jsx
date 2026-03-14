@@ -6,6 +6,8 @@ import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { revokeToken } from "../../api/sheetsClient";
 import { checkSchemaVersion } from "../../api/settings";
+import { useSchemaCheck } from "../../hooks/useSchemaCheck";
+import { SCHEMA_VERSION } from "../../constants/paps";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -24,6 +26,7 @@ export default function Settings() {
     setSheetId, setSchoolInfo, resetSettings,
   } = useSettingsStore();
 
+  const { sheetVersion, checkAndMigrate } = useSchemaCheck();
   const [form, setForm] = useState({ schoolName, schoolYear, teacherName });
   const [newSheetId, setNewSheetId] = useState(sheetId || "");
   const [testState, setTestState] = useState(null); // null | "testing" | "ok" | "error"
@@ -80,7 +83,7 @@ export default function Settings() {
           <CardHeader><CardTitle className="text-base">로그인 계정</CardTitle></CardHeader>
           <CardContent className="flex items-center gap-3">
             {user?.picture && (
-              <img src={user.picture} alt="" className="w-10 h-10 rounded-full" />
+              <img src={user.picture} alt={user.name} className="w-10 h-10 rounded-full" />
             )}
             <div>
               <p className="font-medium">{user?.name}</p>
@@ -161,6 +164,36 @@ export default function Settings() {
             <Button onClick={handleSchoolSave} variant={saved ? "outline" : "default"}>
               {saved ? <><CheckCircle className="h-4 w-4 text-green-500" /> 저장됨</> : "저장"}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* 시스템 정보 */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">시스템 정보</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-500">앱 버전</span>
+                <span className="font-mono">1.0.0</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">스키마 버전 (앱)</span>
+                <Badge variant="outline" className="font-mono text-xs">{SCHEMA_VERSION}</Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">스키마 버전 (Sheet)</span>
+                <Badge variant="outline" className="font-mono text-xs">{sheetVersion || "확인 중..."}</Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">연결된 Sheet ID</span>
+                <span className="font-mono text-xs text-gray-700 truncate max-w-[180px]">{sheetId || "-"}</span>
+              </div>
+            </div>
+            <div className="border-t pt-3">
+              <Button variant="outline" size="sm" onClick={checkAndMigrate}>
+                <RefreshCw className="h-4 w-4" /> 버전 재확인
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

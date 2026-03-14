@@ -105,7 +105,7 @@ export default function StudentMeasure() {
   return (
     <AppLayout>
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate(`/measure/${classId}`)}>
+        <Button variant="ghost" size="icon" aria-label="뒤로 가기" onClick={() => navigate(`/measure/${classId}`)}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div>

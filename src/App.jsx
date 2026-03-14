@@ -1,25 +1,36 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
 import { useSettingsStore } from "./store/settingsStore";
 import { initGoogleAuth } from "./api/sheetsClient";
 import { Toaster } from "./components/ui/Toaster";
+import { ErrorBoundary } from "./components/layout/ErrorBoundary";
 
-// App 페이지
+// 즉시 로드 (온보딩 진입점)
 import Onboarding from "./pages/app/Onboarding";
-import Home from "./pages/app/Home";
-import ClassMeasure from "./pages/app/ClassMeasure";
-import StudentMeasure from "./pages/app/StudentMeasure";
-import Students from "./pages/app/Students";
-import Settings from "./pages/app/Settings";
 
-// Dashboard 페이지
-import DashboardHome from "./pages/dashboard/DashboardHome";
-import Overview from "./pages/dashboard/Overview";
-import ClassDetail from "./pages/dashboard/ClassDetail";
-import StudentDetail from "./pages/dashboard/StudentDetail";
-import Report from "./pages/dashboard/Report";
+// 지연 로드 — App 페이지
+const Home = lazy(() => import("./pages/app/Home"));
+const ClassMeasure = lazy(() => import("./pages/app/ClassMeasure"));
+const StudentMeasure = lazy(() => import("./pages/app/StudentMeasure"));
+const Students = lazy(() => import("./pages/app/Students"));
+const Settings = lazy(() => import("./pages/app/Settings"));
+
+// 지연 로드 — Dashboard 페이지
+const DashboardHome = lazy(() => import("./pages/dashboard/DashboardHome"));
+const Overview = lazy(() => import("./pages/dashboard/Overview"));
+const ClassDetail = lazy(() => import("./pages/dashboard/ClassDetail"));
+const StudentDetail = lazy(() => import("./pages/dashboard/StudentDetail"));
+const Report = lazy(() => import("./pages/dashboard/Report"));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -60,29 +71,33 @@ export default function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/onboarding" element={<Onboarding />} />
-          {/* Web App */}
-          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/measure/:classId" element={<ProtectedRoute><ClassMeasure /></ProtectedRoute>} />
-          <Route path="/measure/:classId/:studentId" element={<ProtectedRoute><StudentMeasure /></ProtectedRoute>} />
-          <Route path="/students" element={<ProtectedRoute><Students /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          {/* Dashboard */}
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
-          <Route path="/dashboard/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
-          <Route path="/dashboard/class" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
-          <Route path="/dashboard/class/:classId" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
-          <Route path="/dashboard/student" element={<ProtectedRoute><StudentDetail /></ProtectedRoute>} />
-          <Route path="/dashboard/student/:studentId" element={<ProtectedRoute><StudentDetail /></ProtectedRoute>} />
-          <Route path="/dashboard/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
-          {/* 기본 리디렉션 */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Toaster />
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/onboarding" element={<Onboarding />} />
+              {/* Web App */}
+              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+              <Route path="/measure/:classId" element={<ProtectedRoute><ClassMeasure /></ProtectedRoute>} />
+              <Route path="/measure/:classId/:studentId" element={<ProtectedRoute><StudentMeasure /></ProtectedRoute>} />
+              <Route path="/students" element={<ProtectedRoute><Students /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              {/* Dashboard */}
+              <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
+              <Route path="/dashboard/overview" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
+              <Route path="/dashboard/class" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
+              <Route path="/dashboard/class/:classId" element={<ProtectedRoute><ClassDetail /></ProtectedRoute>} />
+              <Route path="/dashboard/student" element={<ProtectedRoute><StudentDetail /></ProtectedRoute>} />
+              <Route path="/dashboard/student/:studentId" element={<ProtectedRoute><StudentDetail /></ProtectedRoute>} />
+              <Route path="/dashboard/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+              {/* 기본 리디렉션 */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+          <Toaster />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

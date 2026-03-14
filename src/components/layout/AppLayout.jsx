@@ -4,6 +4,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { revokeToken } from "../../api/sheetsClient";
 import { cn } from "../../lib/utils";
+import { SchemaMigrationBanner } from "./SchemaMigrationBanner";
 
 const navItems = [
   { to: "/", label: "홈", Icon: Home },
@@ -67,7 +68,7 @@ export function AppLayout({ children }) {
             </Link>
             <div className="ml-2 flex items-center gap-2">
               {user?.picture && (
-                <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
+                <img src={user.picture} alt={user.name} className="w-7 h-7 rounded-full" />
               )}
               <span className="text-xs text-gray-500 hidden md:block">
                 {teacherName || user?.name}
@@ -75,7 +76,7 @@ export function AppLayout({ children }) {
               <button
                 onClick={handleLogout}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
-                title="로그아웃"
+                aria-label="로그아웃"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -83,6 +84,9 @@ export function AppLayout({ children }) {
           </div>
         </div>
       </header>
+
+      {/* 스키마 마이그레이션 배너 */}
+      <SchemaMigrationBanner />
 
       {/* 콘텐츠 */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">

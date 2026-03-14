@@ -16,6 +16,8 @@ import { PersonalGrowthCard } from "../../components/report/PersonalGrowthCard";
 import { RawDataExport } from "../../components/report/RawDataExport";
 import { exportMultiPagePdf, exportAllPersonalCards } from "../../utils/pdfExport";
 
+const REPORT_GRADE_KEYS = ["cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade"];
+
 const TABS = [
   { id: "class", label: "학급 보고서", Icon: FileText },
   { id: "personal", label: "개인 성장 카드", Icon: User },
@@ -75,7 +77,6 @@ export default function Report() {
   }, [deduped, activeStudents, filterYear, filterGrade, filterClass]);
 
   // 보고서용: 원시 측정값에서 학생별 평균 등급 산출 (최우수 병합 없음)
-  const REPORT_GRADE_KEYS = ["cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade"];
   const reportMeasurements = useMemo(() => {
     let raw = measurements;
     if (filterYear) raw = raw.filter((m) => String(m.year) === filterYear);

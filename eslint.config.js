@@ -7,7 +7,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores(['dist', 'coverage']),
   {
-    files: ['tailwind.config.js'],
+    files: ['tailwind.config.js', 'vite.config.js'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },

@@ -165,6 +165,7 @@ export default function ClassMeasure() {
       } else {
         toast.error("저장에 실패했습니다. 데이터는 임시저장됐습니다.");
       }
+      saveBatch.reset();
     }
   };
 
@@ -172,7 +173,7 @@ export default function ClassMeasure() {
     <AppLayout>
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+        <Button variant="ghost" size="icon" aria-label="뒤로 가기" onClick={() => navigate("/")}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div>

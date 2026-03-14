@@ -12,6 +12,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- GitHub Pages SPA 라우팅: 404.html에서 전달된 경로 복원 -->
+    <script>
+      (function () {
+        var redirect = new URLSearchParams(window.location.search).get("redirect");
+        if (redirect) {
+          window.history.replaceState(null, "", redirect);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

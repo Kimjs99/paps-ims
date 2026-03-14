@@ -86,7 +86,7 @@ export function PersonalGrowthCard({ student, measurements, schoolName, schoolYe
     <div
       id={id}
       className="bg-white p-5 border rounded-xl"
-      style={{ width: "148mm", minHeight: "210mm", boxSizing: "border-box" }}
+      style={{ width: "148mm", boxSizing: "border-box" }}
     >
       {/* 헤더 */}
       <div className="text-center mb-4 border-b pb-3">

@@ -84,12 +84,12 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
             <Link
               to="/settings"
               className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
-              title="설정"
+              aria-label="설정"
             >
               <Settings size={16} />
             </Link>
             {user?.picture && (
-              <img src={user.picture} alt="" className="w-7 h-7 rounded-full" />
+              <img src={user.picture} alt={user.name} className="w-7 h-7 rounded-full" />
             )}
             <span className="text-xs text-gray-500 hidden md:block">
               {teacherName || user?.name}
@@ -97,7 +97,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
             <button
               onClick={handleLogout}
               className="p-1.5 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
-              title="로그아웃"
+              aria-label="로그아웃"
             >
               <LogOut size={16} />
             </button>
