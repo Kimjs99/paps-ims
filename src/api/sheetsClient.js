@@ -58,6 +58,9 @@ export const requestAccessToken = () => {
       );
       resolve(tokenResponse);
     };
+    tokenClient.error_callback = (error) => {
+      reject(new Error(error?.type || "OAUTH_ERROR"));
+    };
     tokenClient.requestAccessToken({ prompt: "consent" });
   });
 };
@@ -91,6 +94,11 @@ export const getValidToken = async () => {
         Date.now() + tokenResponse.expires_in * 1000
       );
       resolve(tokenResponse.access_token);
+    };
+    tokenClient.error_callback = (error) => {
+      clearTimeout(timeoutId);
+      sessionStorage.removeItem("gapi_token");
+      reject(new Error(error?.type || "AUTH_EXPIRED"));
     };
     tokenClient.requestAccessToken({ prompt: "" });
   });

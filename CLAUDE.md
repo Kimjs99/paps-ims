@@ -171,6 +171,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - **테스트 mock에서 `nowKST` 누락 주의**: `sheetsClient` mock 시 `nowKST: vi.fn(() => '...')` 반드시 포함 — 누락 시 이후 테스트까지 연쇄 오염
 - **`vi.clearAllMocks()`는 `mockResolvedValueOnce` 큐를 초기화하지 않음**: 실패한 테스트가 소비되지 않은 mock 값을 남기면 이후 테스트에 영향
 - **`useMutation` 에러 후 `isPending` 고착**: `mutateAsync` catch 블록에서 `mutation.reset()` 호출 필요 — 미호출 시 버튼이 "저장 중" 상태로 고착됨
+- **GIS `requestAccessToken` popup 닫힘**: `error_callback` 없으면 Promise가 영원히 pending → `loading` stuck. `tokenClient.error_callback`을 반드시 함께 설정할 것
 - **아이콘 전용 버튼·링크**: `aria-label` 필수 — 없으면 스크린리더가 버튼 목적을 알 수 없음
 - **`<Progress>` 컴포넌트**: `aria-label` 필수 — Radix UI progressbar role은 accessible name이 없으면 Lighthouse 경고 발생
 
