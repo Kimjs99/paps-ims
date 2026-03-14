@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.1] - 2026-03-14
+
+### ♿ Accessibility
+- 아이콘 버튼 `aria-label` 추가 — 로그아웃, 설정, 뒤로 가기 (f313ed3)
+- `<Progress>` 컴포넌트 `aria-label` 추가 — 학급 측정 진행률, 온보딩 단계 (f313ed3)
+- 프로필 이미지 `alt` 속성 추가 — AppLayout, DashboardLayout, Settings (f313ed3)
+- Home.jsx 헤딩 순서 수정 — h1→h3 스킵 → h1→h2 (f313ed3)
+- Lighthouse Accessibility 93점 달성 (목표 90 초과)
+
+### 📝 Documentation
+- README.md 기본 내용 작성 — 빠른 시작, 기술 스택, 배포 안내 (f313ed3)
+- CLAUDE.md Phase 6·7 완료 반영, 주의사항 보완 (f313ed3)
+
+### 🔧 Chores
+- `src/assets/` 빈 디렉토리 제거 (f313ed3)
+- `.DS_Store` 제거 (f313ed3)
+
 ## [v0.6.0] - 2026-03-14
 
 ### ✨ Features
