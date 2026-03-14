@@ -19,6 +19,7 @@ export const initGoogleAuth = () => {
       reject(new Error("Google Identity Services 로드 실패. 네트워크를 확인하세요."));
       return;
     }
+    console.log("[GIS] client_id prefix:", import.meta.env.VITE_GOOGLE_CLIENT_ID?.slice(0, 12));
     tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       scope: SCOPES,
