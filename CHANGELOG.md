@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.1] - 2026-03-14
+
+### 🔧 Chores
+- GitHub Pages 워크플로우 제거 — Vercel 단독 운영으로 전환 (2fcca76)
+- Vercel 배포 OAuth 로그인 이슈 디버깅 후 원복 — v0.7.0 클린 상태 유지 (87eafbf)
+
 ## [v0.7.0] - 2026-03-14
 
 ### ✅ QA 완료
