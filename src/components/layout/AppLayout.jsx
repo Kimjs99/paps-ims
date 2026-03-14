@@ -92,6 +92,11 @@ export function AppLayout({ children }) {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         {children}
       </main>
+
+      {/* 푸터 */}
+      <footer className="border-t bg-white py-3 text-center text-xs text-gray-400">
+        © 2026 PAPS-IMS · Developed by Kimjs99
+      </footer>
     </div>
   );
 }

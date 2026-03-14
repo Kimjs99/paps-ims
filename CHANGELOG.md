@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0] - 2026-03-14
+
+### ✅ QA 완료
+- 수동 QA 시나리오 A~F 전체 통과 (온보딩·측정 입력·네트워크 오류·대시보드 폴링·보고서 출력·스키마 마이그레이션)
+- Chrome · Safari · Edge 크로스 브라우저 테스트 완료
+- Lighthouse 성능·접근성·SEO 측정 완료 — Accessibility 93점 유지
+
+### 💄 Style
+- AppLayout·DashboardLayout 하단 푸터 추가 — 저작권 및 개발자 표기
+
 ## [v0.6.3] - 2026-03-14
 
 ### 🐛 Bug Fixes

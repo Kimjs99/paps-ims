@@ -117,6 +117,11 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
         <main className="flex-1 px-4 py-6 pb-24 md:pb-6 min-w-0">{children}</main>
       </div>
 
+      {/* 푸터 */}
+      <footer className="border-t bg-white py-3 text-center text-xs text-gray-400 print-hidden">
+        © 2026 PAPS-IMS · Developed by Kimjs99
+      </footer>
+
       {/* 모바일 하단 탭바 */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40 print-hidden">
         <div className="flex">
