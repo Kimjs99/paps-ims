@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.2] - 2026-03-14
+
+### 🐛 Bug Fixes
+- vercel.json SPA 라우팅 설정 추가 — /onboarding 등 직접 접근 시 404 수정 (8a28d62)
+
+### 📝 Documentation
+- README.md 정리 — Vercel 배포 URL, 환경변수 테이블 추가 (fe49d8f)
+- CLAUDE.md 개선 — Vercel 배포, 접근성 주의사항, Phase 7 완료 반영 (69cd2a3)
+
+### 🔧 Chores
+- .gitignore에 .vercel 추가 (Vercel CLI 자동 생성) (0336c92)
+
 ## [v0.6.1] - 2026-03-14
 
 ### ♿ Accessibility
