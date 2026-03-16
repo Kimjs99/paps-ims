@@ -28,7 +28,6 @@ bun run dev            # http://localhost:5174
 
 ## 배포
 
-**Vercel**: `main` 브랜치 push 시 자동 배포.
-**GitHub Pages**: `.github/workflows/deploy.yml` — GitHub Actions 자동 빌드·배포.
+**Vercel**: `main` 브랜치 push 시 자동 배포. SPA 라우팅은 `vercel.json` rewrites로 처리.
 
-배포 후 Google Cloud Console → OAuth 클라이언트 → 승인된 JavaScript 원본에 배포 도메인 등록 필요.
+배포 후 Google Cloud Console → OAuth 클라이언트 → **승인된 JavaScript 원본**에 배포 도메인 등록 필요.
