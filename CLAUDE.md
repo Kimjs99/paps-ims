@@ -180,4 +180,5 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - **OAuth 팝업 닫힘 감지**: `openOAuthPopup` 내부 polling이 `popup.closed` 접근 시 COOP `SecurityError` 발생 → try-catch로 억제. 팝업이 닫히면 `popup_closed` 에러 throw → 호출부에서 `AUTH_EXPIRED` 처리
 - **아이콘 전용 버튼·링크**: `aria-label` 필수 — 없으면 스크린리더가 버튼 목적을 알 수 없음
 - **`<Progress>` 컴포넌트**: `aria-label` 필수 — Radix UI progressbar role은 accessible name이 없으면 Lighthouse 경고 발생
+- **`grades_standard` 시트 시드 미구현**: 템플릿 사본 생성 시 등급 기준 데이터가 비어있음 → 등급 계산 전부 `null` 반환. 온보딩 연동 테스트 후 자동 시드 구현 예정 (옵션 A, `.grades_standard_todo.md` 참고)
 
