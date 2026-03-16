@@ -22,18 +22,18 @@ bun run test src/test/students.test.js
 ## 아키텍처 개요
 
 **서버 없는 구조**: Google Sheets API v4가 유일한 DB. Firebase/Supabase 없음.
-**인증**: Google Identity Services(GIS) implicit flow — 토큰은 `sessionStorage`에만 저장, `localStorage`에 저장 금지.
+**인증**: 커스텀 OAuth 팝업 flow (`openOAuthPopup` → `oauth-callback.html` → postMessage) — 토큰은 `sessionStorage`에만 저장, `localStorage`에 저장 금지. GIS 라이브러리 미사용.
 **상태**: Zustand persist 스토어 2개가 `localStorage`에 저장됨 — `paps-auth`(로그인 상태), `paps-settings`(Sheet ID·학교 정보).
 
 ## 핵심 데이터 흐름
 
 ```
-GIS 팝업 → tokenClient.callback → sessionStorage 토큰 저장
+openOAuthPopup() → oauth-callback.html(postMessage) → sessionStorage 토큰 저장
                                          ↓
 sheetsRequest() → Authorization: Bearer {token} → Sheets API v4
                                          ↓
 withRetry() — 429 시 지수 백오프(최대 3회), 401 시 즉시 throw
-  ※ getValidToken() 토큰 갱신 8초 타임아웃, fetch() AbortController 8초 타임아웃
+  ※ getValidToken() 무음 갱신 실패 시 AUTH_EXPIRED throw, fetch() AbortController 8초 타임아웃
                                          ↓
 useSheets() (TanStack Query) — staleTime 30s, refetchInterval 30s
 ```
@@ -118,18 +118,18 @@ ClassReportPreview / PersonalGrowthCard
 
 ```
 VITE_GOOGLE_CLIENT_ID   — OAuth 2.0 클라이언트 ID
-VITE_GOOGLE_API_KEY     — Sheets API 키 (웹사이트 제한 + Sheets API 제한 설정)
+VITE_GOOGLE_API_KEY     — Sheets API 키 (현재 코드에서 미사용 — 모든 API 호출은 OAuth 토큰으로 처리)
 VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 ```
 
 ## 배포
 
 **Vercel (현재 운영)**: 프로젝트 연결 후 환경변수 3개 등록, 빌드 명령 `bun run build`, 출력 디렉토리 `dist`. `base`는 `/`(기본값) 사용.
-- SPA 라우팅은 `vercel.json` rewrites로 처리 (`public/404.html` 트릭은 Vercel에서 무해하지만 불필요)
+- SPA 라우팅은 `vercel.json` rewrites로 처리
 - main 브랜치 push 시 Vercel 자동 배포 (GitHub Actions 워크플로우 없음)
 
 **배포 후 필수**: Google Cloud Console → OAuth 클라이언트 → **승인된 JavaScript 원본**에 배포 도메인 등록.
-- 등록 누락 시 GIS 팝업이 계정 선택 후 바로 닫히며 `popup_closed` 오류 발생
+- 등록 누락 시 OAuth 팝업이 `redirect_uri_mismatch` 또는 `popup_closed` 오류 반환
 
 **배포 OAuth 이슈 (해결됨 v0.7.2)**: GIS implicit flow → 커스텀 팝업 flow로 교체 완료.
 - 원인: `accounts.google.com` COOP `same-origin` 헤더로 인해 GIS 팝업→부모창 토큰 전달 차단
@@ -169,7 +169,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 
 ## 주요 주의사항 (버그 경험)
 
-- **앱 시작 시 `initGoogleAuth()` 필수**: `App.jsx` useEffect에서 호출. 누락 시 새로고침 후 `AUTH_NOT_INITIALIZED` 오류
+- **앱 시작 시 `initGoogleAuth()` 호출**: `App.jsx` useEffect에서 호출 — 현재는 `Promise.resolve()` no-op이나 향후 초기화 로직 추가 시 필요하므로 유지
 - **Sheets API 불리언 반환값**: `"TRUE"` (대문자 문자열)로 반환됨 → `String(v).toLowerCase() !== "false"` 패턴 사용
 - **Radix Select + react-hook-form `reset()`**: `reset()` 대신 `setValue()` 사용, Select에 `key={field.value}` 추가
 - **grades_standard staleTime**: 5분. 데이터 변경 후 F5 새로고침 필요
@@ -177,7 +177,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - **테스트 mock에서 `nowKST` 누락 주의**: `sheetsClient` mock 시 `nowKST: vi.fn(() => '...')` 반드시 포함 — 누락 시 이후 테스트까지 연쇄 오염
 - **`vi.clearAllMocks()`는 `mockResolvedValueOnce` 큐를 초기화하지 않음**: 실패한 테스트가 소비되지 않은 mock 값을 남기면 이후 테스트에 영향
 - **`useMutation` 에러 후 `isPending` 고착**: `mutateAsync` catch 블록에서 `mutation.reset()` 호출 필요 — 미호출 시 버튼이 "저장 중" 상태로 고착됨
-- **GIS `requestAccessToken` popup 닫힘**: `error_callback` 없으면 Promise가 영원히 pending → `loading` stuck. `tokenClient.error_callback`을 반드시 함께 설정할 것
+- **OAuth 팝업 닫힘 감지**: `openOAuthPopup` 내부 polling이 `popup.closed` 접근 시 COOP `SecurityError` 발생 → try-catch로 억제. 팝업이 닫히면 `popup_closed` 에러 throw → 호출부에서 `AUTH_EXPIRED` 처리
 - **아이콘 전용 버튼·링크**: `aria-label` 필수 — 없으면 스크린리더가 버튼 목적을 알 수 없음
 - **`<Progress>` 컴포넌트**: `aria-label` 필수 — Radix UI progressbar role은 accessible name이 없으면 Lighthouse 경고 발생
 
