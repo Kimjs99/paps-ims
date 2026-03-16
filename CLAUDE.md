@@ -131,7 +131,10 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 **배포 후 필수**: Google Cloud Console → OAuth 클라이언트 → **승인된 JavaScript 원본**에 배포 도메인 등록.
 - 등록 누락 시 GIS 팝업이 계정 선택 후 바로 닫히며 `popup_closed` 오류 발생
 
-**미해결 배포 이슈 (조사 중)**: Vercel HTTPS 환경에서 GIS implicit flow 팝업이 `popup_closed`를 반환. 로컬(localhost)에서는 정상. 원인: GIS가 `accounts.google.com` COOP `same-origin`으로 인해 팝업→부모창 토큰 전달 실패. 해결 예정: `public/oauth-callback.html` + 커스텀 팝업 flow로 GIS 대체.
+**배포 OAuth 이슈 (해결됨 v0.7.2)**: GIS implicit flow → 커스텀 팝업 flow로 교체 완료.
+- 원인: `accounts.google.com` COOP `same-origin` 헤더로 인해 GIS 팝업→부모창 토큰 전달 차단
+- 해결: `public/oauth-callback.html`(동일 origin 리디렉트 페이지)로 토큰 수신 후 `postMessage` 전달
+- 추가 수정: `VITE_GOOGLE_CLIENT_ID` trailing newline → `.trim()` 적용, OAuth scope에 `openid profile email` 추가
 
 ## ESLint 규칙 주의사항
 

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.2] - 2026-03-16
+
+### 🐛 Bug Fixes
+- OAuth scope에 `openid` · `profile` · `email` 추가 — userinfo 401 오류 해결 (4d20ae7)
+- `VITE_GOOGLE_CLIENT_ID` `.trim()` 적용 — Vercel 환경변수 trailing newline(`%0A`) 인코딩으로 인한 `invalid_client` 오류 해결 (1fe78d0)
+- `initGoogleAuth` GIS 의존성 제거 — 커스텀 OAuth 팝업 flow 전환 후 GIS 미로드 시 초기화 실패 수정 (9526084)
+
+### ✨ Features
+- GIS COOP 이슈 해결 — 커스텀 OAuth 팝업 flow(`oauth-callback.html` + postMessage) 도입으로 Vercel HTTPS 환경 로그인 정상화 (edc3999)
+
 ## [v0.7.1] - 2026-03-14
 
 ### 🔧 Chores
