@@ -50,9 +50,13 @@ const openOAuthPopup = (prompt = "select_account") => {
     };
 
     const pollId = setInterval(() => {
-      if (popup.closed) {
-        cleanup();
-        reject(new Error("popup_closed"));
+      try {
+        if (popup.closed) {
+          cleanup();
+          reject(new Error("popup_closed"));
+        }
+      } catch {
+        // accounts.google.com COOP same-origin이 popup.closed 접근을 차단하는 경우 무시
       }
     }, 500);
 
