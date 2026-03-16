@@ -19,7 +19,7 @@ const openOAuthPopup = (prompt = "select_account") => {
     const redirectUri = `${window.location.origin}/oauth-callback.html`;
     const url =
       `https://accounts.google.com/o/oauth2/v2/auth` +
-      `?client_id=${encodeURIComponent((import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim())}` +
+      `?client_id=${encodeURIComponent(import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || "")}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=token` +
       `&scope=${encodeURIComponent(SCOPES)}` +
@@ -55,8 +55,10 @@ const openOAuthPopup = (prompt = "select_account") => {
           cleanup();
           reject(new Error("popup_closed"));
         }
-      } catch {
-        // accounts.google.com COOP same-origin이 popup.closed 접근을 차단하는 경우 무시
+      } catch (e) {
+        // accounts.google.com COOP same-origin이 popup.closed 접근을 SecurityError로 차단 — 무시
+        // 그 외 예외는 재throw
+        if (e.name !== "SecurityError") throw e;
       }
     }, 500);
 
