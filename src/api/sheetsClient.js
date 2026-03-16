@@ -6,6 +6,9 @@ export const nowKST = () => {
 
 // Google API 로드 및 인증 관리
 const SCOPES = [
+  "openid",
+  "profile",
+  "email",
   "https://www.googleapis.com/auth/spreadsheets",
   "https://www.googleapis.com/auth/drive.file",
 ].join(" ");
