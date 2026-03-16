@@ -2,7 +2,7 @@
 
 학교 체력검사(PAPS) 측정·관리 웹앱. Google Sheets를 DB로 사용하는 서버리스 구조.
 
-**배포 URL**: https://paps-54321s0mh-jsmajs-9184s-projects.vercel.app
+**배포 URL**: https://paps-ims.vercel.app
 
 ## 기술 스택
 
