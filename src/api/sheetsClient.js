@@ -69,22 +69,8 @@ const openOAuthPopup = (prompt = "select_account") => {
   });
 };
 
-// GIS 초기화 — 하위 호환성 유지 (토큰 갱신에서 사용)
-let tokenClient = null;
-export const initGoogleAuth = () => {
-  return new Promise((resolve, reject) => {
-    if (!window.google?.accounts?.oauth2) {
-      reject(new Error("Google Identity Services 로드 실패. 네트워크를 확인하세요."));
-      return;
-    }
-    tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      scope: SCOPES,
-      callback: () => {},
-    });
-    resolve(tokenClient);
-  });
-};
+// GIS 초기화 — 커스텀 팝업 flow로 전환 후 GIS 불필요, 하위 호환성 유지
+export const initGoogleAuth = () => Promise.resolve();
 
 // 토큰 요청 (로그인 팝업) — 커스텀 팝업 flow 사용
 export const requestAccessToken = () => openOAuthPopup("select_account");
