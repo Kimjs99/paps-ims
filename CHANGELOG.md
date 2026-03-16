@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.4] - 2026-03-17
+
+### ♻️ Refactoring
+- `sheetsClient` catch 범위 축소 — `SecurityError`만 무시, 나머지 예외 re-throw (a216183)
+- `VITE_GOOGLE_CLIENT_ID?.trim() || ""` optional chaining으로 수정 (a216183)
+
+### 📝 Documentation
+- CLAUDE.md 현행화 — GIS → 커스텀 OAuth 팝업 flow, `VITE_GOOGLE_API_KEY` 미사용 표기 (c80b795)
+- 교사 사용가이드 초심자 버전 추가 (`docs/교사_사용가이드_초심자.md`) — 준비물부터 보고서 출력까지 단계별 상세 안내 (941fdf4)
+
 ## [v0.7.3] - 2026-03-16
 
 ### 📝 Documentation
