@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.3] - 2026-03-16
+
+### 📝 Documentation
+- 배포 URL 고정 프로덕션 도메인(`paps-ims.vercel.app`)으로 통일 — README, 교사_사용가이드 (1bebb90)
+
+### 🔧 Chores
+- `public/404.html` 삭제 — GitHub Pages SPA 리디렉트 파일, Vercel에서 불필요 (b3483f0)
+- `.github/workflows/` 빈 디렉토리 삭제 (b3483f0)
+- `README.md` GitHub Pages/Actions 언급 제거 (b3483f0)
+
 ## [v0.7.2] - 2026-03-16
 
 ### 🐛 Bug Fixes
