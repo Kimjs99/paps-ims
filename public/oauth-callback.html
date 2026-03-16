@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>인증 중...</title></head>
+<body>
+<script>
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  const search = new URLSearchParams(window.location.search);
+  const payload = {
+    type: "PAPS_OAUTH_CALLBACK",
+    access_token: hash.get("access_token"),
+    expires_in: hash.get("expires_in"),
+    error: hash.get("error") || search.get("error"),
+  };
+  if (window.opener && !window.opener.closed) {
+    window.opener.postMessage(payload, window.location.origin);
+  }
+  window.close();
+</script>
+</body>
+</html>

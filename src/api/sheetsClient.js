@@ -10,9 +10,66 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive.file",
 ].join(" ");
 
-let tokenClient = null;
+// 커스텀 OAuth 팝업 (GIS 내부 메커니즘 대신 사용 — COOP 우회)
+const openOAuthPopup = (prompt = "select_account") => {
+  return new Promise((resolve, reject) => {
+    const redirectUri = `${window.location.origin}/oauth-callback.html`;
+    const url =
+      `https://accounts.google.com/o/oauth2/v2/auth` +
+      `?client_id=${encodeURIComponent(import.meta.env.VITE_GOOGLE_CLIENT_ID)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=token` +
+      `&scope=${encodeURIComponent(SCOPES)}` +
+      `&prompt=${prompt}`;
 
-// GIS(Google Identity Services) 초기화
+    const popup = window.open(url, "paps_oauth", "width=500,height=600,left=200,top=100");
+    if (!popup) {
+      reject(new Error("popup_blocked"));
+      return;
+    }
+
+    const onMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== "PAPS_OAUTH_CALLBACK") return;
+      cleanup();
+      if (event.data.error) {
+        reject(new Error(event.data.error));
+      } else if (event.data.access_token) {
+        sessionStorage.setItem("gapi_token", event.data.access_token);
+        sessionStorage.setItem(
+          "gapi_token_expiry",
+          Date.now() + Number(event.data.expires_in) * 1000
+        );
+        resolve({ access_token: event.data.access_token });
+      } else {
+        reject(new Error("no_token"));
+      }
+    };
+
+    const pollId = setInterval(() => {
+      if (popup.closed) {
+        cleanup();
+        reject(new Error("popup_closed"));
+      }
+    }, 500);
+
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error("popup_timeout"));
+    }, 120000);
+
+    const cleanup = () => {
+      window.removeEventListener("message", onMessage);
+      clearInterval(pollId);
+      clearTimeout(timeoutId);
+    };
+
+    window.addEventListener("message", onMessage);
+  });
+};
+
+// GIS 초기화 — 하위 호환성 유지 (토큰 갱신에서 사용)
+let tokenClient = null;
 export const initGoogleAuth = () => {
   return new Promise((resolve, reject) => {
     if (!window.google?.accounts?.oauth2) {
@@ -22,48 +79,14 @@ export const initGoogleAuth = () => {
     tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       scope: SCOPES,
-      callback: (tokenResponse) => {
-        if (tokenResponse.error) {
-          reject(new Error(tokenResponse.error));
-          return;
-        }
-        sessionStorage.setItem("gapi_token", tokenResponse.access_token);
-        sessionStorage.setItem(
-          "gapi_token_expiry",
-          Date.now() + tokenResponse.expires_in * 1000
-        );
-        resolve(tokenResponse);
-      },
+      callback: () => {},
     });
     resolve(tokenClient);
   });
 };
 
-// 토큰 요청 (로그인 팝업)
-export const requestAccessToken = () => {
-  return new Promise((resolve, reject) => {
-    if (!tokenClient) {
-      reject(new Error("AUTH_NOT_INITIALIZED"));
-      return;
-    }
-    tokenClient.callback = (tokenResponse) => {
-      if (tokenResponse.error) {
-        reject(new Error(tokenResponse.error));
-        return;
-      }
-      sessionStorage.setItem("gapi_token", tokenResponse.access_token);
-      sessionStorage.setItem(
-        "gapi_token_expiry",
-        Date.now() + tokenResponse.expires_in * 1000
-      );
-      resolve(tokenResponse);
-    };
-    tokenClient.error_callback = (error) => {
-      reject(new Error(error?.type || "OAUTH_ERROR"));
-    };
-    tokenClient.requestAccessToken({ prompt: "consent" });
-  });
-};
+// 토큰 요청 (로그인 팝업) — 커스텀 팝업 flow 사용
+export const requestAccessToken = () => openOAuthPopup("select_account");
 
 // 토큰 유효성 확인
 export const getValidToken = async () => {
@@ -72,36 +95,14 @@ export const getValidToken = async () => {
   if (token && expiry && Date.now() < Number(expiry) - 60000) {
     return token;
   }
-  // 토큰 만료 → 재요청 (사용자 상호작용 없이)
-  return new Promise((resolve, reject) => {
-    if (!tokenClient) {
-      reject(new Error("AUTH_NOT_INITIALIZED"));
-      return;
-    }
-    const timeoutId = setTimeout(() => {
-      reject(new Error("네트워크 연결을 확인하세요. (인증 시간 초과)"));
-    }, 8000);
-    tokenClient.callback = (tokenResponse) => {
-      clearTimeout(timeoutId);
-      if (tokenResponse.error) {
-        sessionStorage.removeItem("gapi_token");
-        reject(new Error("AUTH_EXPIRED"));
-        return;
-      }
-      sessionStorage.setItem("gapi_token", tokenResponse.access_token);
-      sessionStorage.setItem(
-        "gapi_token_expiry",
-        Date.now() + tokenResponse.expires_in * 1000
-      );
-      resolve(tokenResponse.access_token);
-    };
-    tokenClient.error_callback = (error) => {
-      clearTimeout(timeoutId);
-      sessionStorage.removeItem("gapi_token");
-      reject(new Error(error?.type || "AUTH_EXPIRED"));
-    };
-    tokenClient.requestAccessToken({ prompt: "" });
-  });
+  // 토큰 만료 → 커스텀 팝업으로 자동 갱신 (prompt:none = 사용자 상호작용 없이 시도)
+  try {
+    const result = await openOAuthPopup("none");
+    return result.access_token;
+  } catch {
+    sessionStorage.removeItem("gapi_token");
+    throw new Error("AUTH_EXPIRED");
+  }
 };
 
 // 로그아웃
