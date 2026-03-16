@@ -22,6 +22,7 @@ const openOAuthPopup = (prompt = "select_account") => {
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&prompt=${prompt}`;
 
+    console.log("[OAuth URL]", url);
     const popup = window.open(url, "paps_oauth", "width=500,height=600,left=200,top=100");
     if (!popup) {
       reject(new Error("popup_blocked"));
