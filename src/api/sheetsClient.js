@@ -16,13 +16,12 @@ const openOAuthPopup = (prompt = "select_account") => {
     const redirectUri = `${window.location.origin}/oauth-callback.html`;
     const url =
       `https://accounts.google.com/o/oauth2/v2/auth` +
-      `?client_id=${encodeURIComponent(import.meta.env.VITE_GOOGLE_CLIENT_ID)}` +
+      `?client_id=${encodeURIComponent((import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim())}` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_type=token` +
       `&scope=${encodeURIComponent(SCOPES)}` +
       `&prompt=${prompt}`;
 
-    console.log("[OAuth URL]", url);
     const popup = window.open(url, "paps_oauth", "width=500,height=600,left=200,top=100");
     if (!popup) {
       reject(new Error("popup_blocked"));
