@@ -56,6 +56,23 @@ export const saveMeasurement = async (sheetId, measurement) => {
   );
 };
 
+// 기존 측정 행들의 등급 컬럼만 덮어쓰기 (batchUpdate)
+// items: [{ rowIndex: number (0-based array index), measurement: object }]
+export const batchUpdateMeasurementGrades = async (sheetId, items) => {
+  if (!items.length) return;
+  const data = items.map(({ rowIndex, measurement }) => ({
+    range: `${SHEET_NAMES.MEASUREMENTS}!A${rowIndex + 2}:S${rowIndex + 2}`,
+    values: [measurementToRow(measurement)],
+  }));
+  await withRetry(() =>
+    sheetsRequest({
+      method: "POST",
+      path: `/${sheetId}/values:batchUpdate`,
+      body: { valueInputOption: "RAW", data },
+    })
+  );
+};
+
 // 학급 단위 일괄 저장
 export const saveMeasurementsBatch = async (sheetId, measurements) => {
   const values = measurements.map(measurementToRow);

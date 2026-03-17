@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart2, ChevronRight, Loader2 } from "lucide-react";
+import { BarChart2, ChevronRight, Loader2, Trash2 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
-import { useStudents, useMeasurements } from "../../hooks/useSheets";
+import { useStudents, useMeasurements, useDeleteClassHard } from "../../hooks/useSheets";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Card, CardContent } from "../../components/ui/card";
 import { Progress } from "../../components/ui/progress";
@@ -11,6 +11,10 @@ import { Button } from "../../components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../../components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "../../components/ui/dialog";
+import { toast } from "../../store/toastStore";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -18,8 +22,11 @@ export default function Home() {
   const { schoolName, schoolYear, teacherName } = useSettingsStore();
   const { data: students = [], isLoading: studentsLoading } = useStudents();
   const { data: measurements = [] } = useMeasurements();
+  const deleteClassHard = useDeleteClassHard();
 
   const [gradeFilter, setGradeFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState(null); // {grade, class}
+  const [confirmText, setConfirmText] = useState("");
 
   // 학급 목록 도출 (grade-class 조합)
   const classes = useMemo(() => {
@@ -58,6 +65,41 @@ export default function Home() {
   const filteredClasses = gradeFilter === "all"
     ? classStats
     : classStats.filter((c) => c.grade === Number(gradeFilter));
+
+  const expectedConfirm = deleteTarget
+    ? `${deleteTarget.grade}학년 ${deleteTarget.class}반`
+    : "";
+
+  const handleDeleteClass = async () => {
+    if (!deleteTarget || confirmText !== expectedConfirm) return;
+    const { grade, class: cls } = deleteTarget;
+
+    // 해당 학급 학생의 전체 배열 내 인덱스
+    const studentRowIndices = students
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => s.grade === grade && s.class === cls)
+      .map(({ i }) => i);
+
+    const targetStudentIds = new Set(
+      studentRowIndices.map((i) => students[i].student_id)
+    );
+
+    // 해당 학생들의 측정 데이터 인덱스
+    const measurementRowIndices = measurements
+      .map((m, i) => ({ m, i }))
+      .filter(({ m }) => targetStudentIds.has(m.student_id))
+      .map(({ i }) => i);
+
+    try {
+      await deleteClassHard.mutateAsync({ studentRowIndices, measurementRowIndices });
+      toast.success(`${grade}학년 ${cls}반 데이터가 완전 삭제됐습니다.`);
+      setDeleteTarget(null);
+      setConfirmText("");
+    } catch (err) {
+      console.error("[deleteClassHard]", err);
+      toast.error(`삭제 실패: ${err?.message || "알 수 없는 오류"}`);
+    }
+  };
 
   const today = new Date().toLocaleDateString("ko-KR", {
     year: "numeric", month: "long", day: "numeric", weekday: "short",
@@ -118,7 +160,7 @@ export default function Home() {
           {filteredClasses.map(({ grade, class: cls, key, total, completed, progress }) => (
             <Card
               key={key}
-              className="cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
+              className="cursor-pointer hover:shadow-md hover:border-blue-300 transition-all group"
               onClick={() => navigate(`/measure/${key}`)}
             >
               <CardContent className="p-5">
@@ -126,7 +168,22 @@ export default function Home() {
                   <h2 className="text-lg font-bold text-gray-900">
                     {grade}학년 {cls}반
                   </h2>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`${grade}학년 ${cls}반 완전 삭제`}
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget({ grade, class: cls });
+                        setConfirmText("");
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm text-gray-600">
@@ -148,6 +205,57 @@ export default function Home() {
           ))}
         </div>
       )}
+      {/* 학급 완전 삭제 확인 다이얼로그 */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setConfirmText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">학급 완전 삭제</DialogTitle>
+            <DialogDescription>
+              이 작업은 되돌릴 수 없습니다. {deleteTarget && `${deleteTarget.grade}학년 ${deleteTarget.class}반`}의 학생 정보와 모든 측정 데이터가 영구 삭제됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (() => {
+            const stat = classStats.find((c) => c.grade === deleteTarget.grade && c.class === deleteTarget.class);
+            const mCount = measurements.filter((m) => {
+              const ids = new Set(students.filter((s) => s.grade === deleteTarget.grade && s.class === deleteTarget.class).map((s) => s.student_id));
+              return ids.has(m.student_id);
+            }).length;
+            return (
+              <div className="space-y-4 py-2">
+                <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700 space-y-1">
+                  <p>· 학생 <strong>{stat?.total ?? 0}명</strong> 삭제</p>
+                  <p>· 측정 기록 <strong>{mCount}건</strong> 삭제</p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm text-gray-600">
+                    확인을 위해 <strong className="text-gray-900">{expectedConfirm}</strong> 을(를) 입력해주세요.
+                  </p>
+                  <input
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                    placeholder={expectedConfirm}
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setConfirmText(""); }}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={confirmText !== expectedConfirm || deleteClassHard.isPending}
+              onClick={handleDeleteClass}
+            >
+              {deleteClassHard.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-1" />삭제 중...</>
+              ) : "완전 삭제"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

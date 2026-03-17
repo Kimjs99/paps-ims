@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, LogOut, TestTube2, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { RefreshCw, LogOut, TestTube2, Loader2, CheckCircle, AlertCircle, RotateCcw } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
-import { revokeToken } from "../../api/sheetsClient";
+import { revokeToken, sheetsRequest } from "../../api/sheetsClient";
 import { checkSchemaVersion } from "../../api/settings";
 import { useSchemaCheck } from "../../hooks/useSchemaCheck";
-import { SCHEMA_VERSION } from "../../constants/paps";
+import { SCHEMA_VERSION, SHEET_NAMES } from "../../constants/paps";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -16,6 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Badge } from "../../components/ui/badge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { toast } from "../../store/toastStore";
+import { getStudents } from "../../api/students";
+import { getMeasurements, batchUpdateMeasurementGrades } from "../../api/measurements";
+import { calcGrade, calcTotalGrade } from "../../utils/gradeCalc";
+import { calcBMI, calcBMIGrade } from "../../utils/bmiCalc";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -32,6 +36,8 @@ export default function Settings() {
   const [testState, setTestState] = useState(null); // null | "testing" | "ok" | "error"
   const [testMsg, setTestMsg] = useState("");
   const [saved, setSaved] = useState(false);
+  const [recalcState, setRecalcState] = useState(null); // null | "loading" | "done" | "error"
+  const [recalcMsg, setRecalcMsg] = useState("");
 
   const handleSchoolSave = () => {
     setSchoolInfo(form);
@@ -64,6 +70,87 @@ export default function Settings() {
   const handleRefreshAll = () => {
     queryClient.invalidateQueries();
     toast.success("모든 데이터를 새로고침합니다.");
+  };
+
+  const handleRecalcGrades = async () => {
+    if (!sheetId) return;
+    setRecalcState("loading");
+    setRecalcMsg("");
+    try {
+      // grades_standard 데이터 로드
+      const gsData = await sheetsRequest({
+        path: `/${sheetId}/values/${SHEET_NAMES.GRADES_STANDARD}!A2:I`,
+      });
+      const gradesData = (gsData.values || []).map((row) => ({
+        grade_level: Number(row[0]),
+        gender: row[1],
+        item: row[2],
+        grade1_min: Number(row[3]),
+        grade2_min: Number(row[4]),
+        grade3_min: Number(row[5]),
+        grade4_min: Number(row[6]),
+        grade5_min: Number(row[7]),
+        higher_is_better: String(row[8]).toLowerCase() === "true",
+      }));
+      if (!gradesData.length) {
+        setRecalcState("error");
+        setRecalcMsg("grades_standard 시트가 비어있습니다. 온보딩에서 기준표를 먼저 등록해주세요.");
+        return;
+      }
+
+      const [allStudents, allMeasurements] = await Promise.all([
+        getStudents(sheetId),
+        getMeasurements(sheetId),
+      ]);
+
+      const studentMap = new Map(allStudents.map((s) => [s.student_id, s]));
+
+      const toUpdate = [];
+      allMeasurements.forEach((m, rowIndex) => {
+        const student = studentMap.get(m.student_id);
+        if (!student) return;
+
+        const bmi = calcBMI(student.height, student.weight);
+        const bmi_grade = calcBMIGrade(bmi);
+
+        const cardio_grade = calcGrade(m.cardio_value, m.cardio_type, student.grade, student.gender, gradesData);
+        const muscle_grade = calcGrade(m.muscle_value, m.muscle_type, student.grade, student.gender, gradesData);
+        const flexibility_grade = calcGrade(m.flexibility_value, "sit_and_reach", student.grade, student.gender, gradesData);
+        const agility_grade = calcGrade(m.agility_value, m.agility_type, student.grade, student.gender, gradesData);
+        const total_grade = calcTotalGrade([cardio_grade, muscle_grade, flexibility_grade, agility_grade, bmi_grade]);
+
+        // 변경이 있는 행만 업데이트
+        if (
+          cardio_grade !== m.cardio_grade ||
+          muscle_grade !== m.muscle_grade ||
+          flexibility_grade !== m.flexibility_grade ||
+          agility_grade !== m.agility_grade ||
+          bmi_grade !== m.bmi_grade ||
+          total_grade !== m.total_grade
+        ) {
+          toUpdate.push({
+            rowIndex,
+            measurement: { ...m, bmi, bmi_grade, cardio_grade, muscle_grade, flexibility_grade, agility_grade, total_grade },
+          });
+        }
+      });
+
+      if (!toUpdate.length) {
+        setRecalcState("done");
+        setRecalcMsg("모든 등급이 이미 최신 상태입니다.");
+        return;
+      }
+
+      await batchUpdateMeasurementGrades(sheetId, toUpdate);
+      queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      setRecalcState("done");
+      setRecalcMsg(`${toUpdate.length}건의 측정 기록 등급이 재계산됐습니다.`);
+      toast.success(`등급 재계산 완료 (${toUpdate.length}건)`);
+    } catch (err) {
+      console.error("[recalcGrades]", err);
+      setRecalcState("error");
+      setRecalcMsg(err?.message || "알 수 없는 오류가 발생했습니다.");
+    }
   };
 
   const handleLogout = () => {
@@ -194,6 +281,46 @@ export default function Settings() {
                 <RefreshCw className="h-4 w-4" /> 버전 재확인
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 데이터 관리 */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">데이터 관리</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">측정 등급 재계산</p>
+                <p className="text-xs text-gray-500">
+                  grades_standard 기준표를 기반으로 기존 측정 기록의 등급을 다시 계산해 저장합니다.
+                  기준표 업데이트 후 등급이 표시되지 않을 때 사용하세요.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                disabled={recalcState === "loading"}
+                onClick={handleRecalcGrades}
+              >
+                {recalcState === "loading"
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> 계산 중...</>
+                  : <><RotateCcw className="h-4 w-4" /> 재계산</>
+                }
+              </Button>
+            </div>
+            {recalcState === "done" && (
+              <Alert className="border-green-300 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">{recalcMsg}</AlertDescription>
+              </Alert>
+            )}
+            {recalcState === "error" && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{recalcMsg}</AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
 
