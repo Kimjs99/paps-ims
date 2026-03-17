@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronLeft, Save, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, Save, Loader2, AlertCircle, Download, Upload } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -40,6 +40,7 @@ export default function ClassMeasure() {
   const { data: measurements = [] } = useMeasurements();
   const { data: gradesData } = useGradesStandard();
   const saveBatch = useSaveMeasurementsBatch();
+  const csvRef = useRef();
 
   // 해당 학급 학생
   const classStudents = useMemo(
@@ -169,6 +170,52 @@ export default function ClassMeasure() {
     }
   };
 
+  // 측정 CSV 템플릿 다운로드 (학급 학생 사전 입력)
+  const handleTemplateDownload = () => {
+    const cardioLabel = CARDIO_TYPES.find((t) => t.value === cardioType)?.label || cardioType;
+    const muscleLabel = MUSCLE_TYPES.find((t) => t.value === muscleType)?.label || muscleType;
+    const agilityLabel = AGILITY_TYPES.find((t) => t.value === agilityType)?.label || agilityType;
+    const header = `student_id,이름,성별,학년,반,심폐지구력(${cardioLabel}),근력근지구력(${muscleLabel}),유연성(앉아윗몸앞으로굽히기cm),순발력(${agilityLabel})`;
+    const rows = classStudents.map((s) =>
+      [s.student_id, s.name, s.gender === "M" ? "남" : "여", s.grade, s.class, "", "", "", ""].join(",")
+    );
+    const bom = "\uFEFF"; // UTF-8 BOM for Excel 한글 깨짐 방지
+    const blob = new Blob([bom + [header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `측정기록_${grade}학년${cls}반_${schoolYear}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 측정 CSV 업로드 → formValues에 반영
+  const handleCsvUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const lines = ev.target.result.split("\n").filter((l) => l.trim());
+      const next = { ...formValues };
+      lines.slice(1).forEach((line) => {
+        const cols = line.split(",").map((v) => v.trim());
+        const [studentId, , , , , cardio, muscle, flex, agility] = cols;
+        if (!studentId) return;
+        next[studentId] = {
+          cardio_value: cardio !== "" ? cardio : (formValues[studentId]?.cardio_value ?? ""),
+          muscle_value: muscle !== "" ? muscle : (formValues[studentId]?.muscle_value ?? ""),
+          flexibility_value: flex !== "" ? flex : (formValues[studentId]?.flexibility_value ?? ""),
+          agility_value: agility !== "" ? agility : (formValues[studentId]?.agility_value ?? ""),
+        };
+      });
+      setFormValues(next);
+      localStorage.setItem(`paps_draft_${classId}_${schoolYear}`, JSON.stringify(next));
+      toast.success("CSV 데이터가 입력란에 반영됐습니다. 확인 후 저장하세요.");
+    };
+    reader.readAsText(file, "UTF-8");
+    e.target.value = "";
+  };
+
   return (
     <AppLayout>
       {/* 헤더 */}
@@ -176,9 +223,18 @@ export default function ClassMeasure() {
         <Button variant="ghost" size="icon" aria-label="뒤로 가기" onClick={() => navigate("/")}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900">{grade}학년 {cls}반 측정</h1>
           <p className="text-sm text-gray-500">{schoolYear}년도 · 전체 {classStudents.length}명</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleTemplateDownload}>
+            <Download className="h-4 w-4" /> 템플릿
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => csvRef.current?.click()}>
+            <Upload className="h-4 w-4" /> CSV 업로드
+          </Button>
+          <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
         </div>
       </div>
 

@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.8.0] - 2026-03-18
+
+### ✨ Features
+- **학생/학급 비활성화(삭제)** — 학생 행 휴지통 버튼으로 개별 비활성화, 학년·반 필터 선택 시 "학급 전체 비활성화" 버튼 표시, 확인 다이얼로그 후 처리 (측정 이력 보존 소프트 삭제)
+- **측정 일괄 등록 템플릿** — ClassMeasure 상단 "템플릿" 버튼으로 현재 학급 학생 사전입력 CSV 다운로드(BOM 포함, Excel 한글 정상 표시), "CSV 업로드" 버튼으로 작성된 값 화면 반영 후 일괄 저장
+- **온보딩 학교급 선택** — Step 4에 초등학교/중학교/고등학교 선택 추가, 완료 시 `grades_standard` 시트가 비어있으면 해당 학교급 PAPS 기준 데이터 자동 시드
+- **PAPS 공식 등급 기준 자동 등록** — `PAPS_평가기준표.xlsx` 교육부 공식 자료 기반 등급 임계값 (`src/utils/gradesStandardSeed.js` 신규), 초등 3~6학년·중학교 1~3학년·고등학교 1~3학년 × 성별(M/F) × 8종목, `endurance_run` 분:초 → 초 단위 자동 변환
+
+### 🔧 Chores
+- `src/api/gradesStandard.js` 신규 — `isGradesStandardEmpty`, `seedGradesStandard` API
+- `settingsStore` `schoolLevel` 필드 추가 (기본값: 중학교)
+- `api/students.js` — `deactivateStudent`, `deactivateClassStudents` 추가
+- `hooks/useSheets.js` — `useDeactivateStudent`, `useDeactivateClassStudents` 추가
+
+### 📝 Documentation
+- `grades_standard_todo.md` 완료 처리 — 시드 구현 완료 기록
+
 ## [v0.7.4] - 2026-03-17
 
 ### ♻️ Refactoring

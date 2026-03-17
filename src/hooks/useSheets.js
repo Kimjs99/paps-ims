@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSettingsStore } from "../store/settingsStore";
-import { getStudents, addStudent, updateStudent, bulkAddStudents } from "../api/students";
+import { getStudents, addStudent, updateStudent, bulkAddStudents, deactivateStudent, deactivateClassStudents } from "../api/students";
 import { getMeasurements, saveMeasurement, saveMeasurementsBatch } from "../api/measurements";
 
 const useSheetId = () => useSettingsStore((s) => s.sheetId);
@@ -31,6 +31,26 @@ export const useUpdateStudent = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ rowIndex, student }) => updateStudent(sheetId, rowIndex, student),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
+  });
+};
+
+// 학생 비활성화 (소프트 삭제)
+export const useDeactivateStudent = () => {
+  const sheetId = useSheetId();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ rowIndex, student }) => deactivateStudent(sheetId, rowIndex, student),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
+  });
+};
+
+// 학급 전체 비활성화
+export const useDeactivateClassStudents = () => {
+  const sheetId = useSheetId();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (items) => deactivateClassStudents(sheetId, items),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["students"] }),
   });
 };

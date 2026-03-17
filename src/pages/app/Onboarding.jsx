@@ -6,11 +6,14 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Alert, AlertDescription } from "../../components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Progress } from "../../components/ui/progress";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { initGoogleAuth, requestAccessToken } from "../../api/sheetsClient";
 import { getSettings, checkSchemaVersion } from "../../api/settings";
+import { isGradesStandardEmpty, seedGradesStandard } from "../../api/gradesStandard";
+import { SCHOOL_LEVELS } from "../../utils/gradesStandardSeed";
 
 const STEPS = [
   { id: 1, title: "Google 로그인" },
@@ -29,7 +32,7 @@ const extractSheetId = (input) => {
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user, isAuthenticated, setUser } = useAuthStore();
-  const { sheetId, setSheetId, schoolName, schoolYear, teacherName, setSchoolInfo, completeOnboarding } = useSettingsStore();
+  const { sheetId, setSheetId, schoolName, schoolYear, teacherName, schoolLevel, setSchoolInfo, completeOnboarding } = useSettingsStore();
 
   const [step, setStep] = useState(isAuthenticated ? 2 : 1);
   const [loading, setLoading] = useState(false);
@@ -41,7 +44,9 @@ export default function Onboarding() {
     schoolName: schoolName || "",
     schoolYear: schoolYear || new Date().getFullYear(),
     teacherName: teacherName || "",
+    schoolLevel: schoolLevel || "중학교",
   });
+  const [seedingStatus, setSeedingStatus] = useState("idle"); // idle | loading | done | error
 
   // GIS 초기화
   useEffect(() => {
@@ -115,13 +120,28 @@ export default function Onboarding() {
     }
   };
 
-  // Step 4: 학교 정보 저장
-  const handleSchoolInfoSave = () => {
+  // Step 4: 학교 정보 저장 + grades_standard 자동 시드
+  const handleSchoolInfoSave = async () => {
     if (!schoolForm.schoolName || !schoolForm.teacherName) {
       setError("학교명과 담당교사명은 필수입니다.");
       return;
     }
     setSchoolInfo(schoolForm);
+    setError("");
+
+    // grades_standard 비어있으면 학교급 기준 데이터 자동 등록
+    setSeedingStatus("loading");
+    try {
+      const empty = await isGradesStandardEmpty(sheetId);
+      if (empty) {
+        await seedGradesStandard(sheetId, schoolForm.schoolLevel);
+      }
+      setSeedingStatus("done");
+    } catch (err) {
+      console.error("[seedGradesStandard]", err);
+      setSeedingStatus("error");
+    }
+
     setStep(5);
   };
 
@@ -298,6 +318,25 @@ export default function Onboarding() {
                   </Alert>
                 )}
                 <div className="space-y-2">
+                  <Label htmlFor="schoolLevel">학교급 *</Label>
+                  <Select
+                    value={schoolForm.schoolLevel}
+                    onValueChange={(v) => setSchoolForm((f) => ({ ...f, schoolLevel: v }))}
+                  >
+                    <SelectTrigger id="schoolLevel">
+                      <SelectValue placeholder="학교급 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SCHOOL_LEVELS.map((lv) => (
+                        <SelectItem key={lv} value={lv}>{lv}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">
+                    선택한 학교급에 맞는 PAPS 등급 기준이 자동으로 등록됩니다.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="schoolName">학교명 *</Label>
                   <Input
                     id="schoolName"
@@ -326,9 +365,12 @@ export default function Onboarding() {
                     onChange={(e) => setSchoolForm((f) => ({ ...f, schoolYear: Number(e.target.value) }))}
                   />
                 </div>
-                <Button className="w-full" onClick={handleSchoolInfoSave}>
-                  저장하고 다음 단계
-                  <ChevronRight className="h-4 w-4" />
+                <Button className="w-full" onClick={handleSchoolInfoSave} disabled={loading || seedingStatus === "loading"}>
+                  {seedingStatus === "loading" ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> 등급 기준 등록 중...</>
+                  ) : (
+                    <>저장하고 다음 단계 <ChevronRight className="h-4 w-4" /></>
+                  )}
                 </Button>
               </div>
             )}
@@ -347,6 +389,10 @@ export default function Onboarding() {
                     <span className="font-medium">{user?.email}</span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-gray-500">학교급</span>
+                    <span className="font-medium">{schoolForm.schoolLevel}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-gray-500">학교명</span>
                     <span className="font-medium">{schoolForm.schoolName}</span>
                   </div>
@@ -357,6 +403,12 @@ export default function Onboarding() {
                   <div className="flex justify-between">
                     <span className="text-gray-500">학년도</span>
                     <span className="font-medium">{schoolForm.schoolYear}년</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">PAPS 등급 기준</span>
+                    <span className={`font-medium ${seedingStatus === "error" ? "text-red-500" : "text-green-600"}`}>
+                      {seedingStatus === "done" ? "자동 등록 완료" : seedingStatus === "error" ? "등록 실패 (수동 필요)" : "처리 중..."}
+                    </span>
                   </div>
                 </div>
                 <Button className="w-full" size="lg" onClick={handleComplete}>

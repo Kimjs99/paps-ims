@@ -64,3 +64,15 @@ export const bulkAddStudents = async (sheetId, students) => {
     })
   );
 };
+
+// 학생 비활성화 (소프트 삭제 — 측정 이력 보존)
+export const deactivateStudent = async (sheetId, rowIndex, student) => {
+  return updateStudent(sheetId, rowIndex, { ...student, is_active: false });
+};
+
+// 학급 전체 비활성화 (items: [{rowIndex, student}])
+export const deactivateClassStudents = async (sheetId, items) => {
+  for (const { rowIndex, student } of items) {
+    await updateStudent(sheetId, rowIndex, { ...student, is_active: false });
+  }
+};
