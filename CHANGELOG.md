@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.11.0] - 2026-03-22
+
+### ✨ Features
+- **학생 개별 조회 측정 기록 개선** — 등급만 표시하던 테이블에 실측값(회/kg/cm/초) 추가, 헤더에 종목명·단위 표기(최신 측정 기준), 마지막 행에 전체 기간 평균값·평균 등급 행 추가 (5e8dd5c)
+
 ## [v0.10.0] - 2026-03-22
 
 ### ✨ Features
