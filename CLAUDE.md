@@ -89,7 +89,7 @@ ClassReportPreview / PersonalGrowthCard
 - **시트 탭 이름은 영문 고정**: `students`, `measurements`, `grades_standard`, `settings`, `changelog` — 코드가 `SHEET_NAMES` 상수로 직접 참조
 - **`settings` 시트 A열 키값 영문 고정**: `SCHEMA_VERSION`, `school_name`, `school_year`, `teacher_name`
 - **컬럼 순서 변경 금지**: `students`·`measurements` 시트는 인덱스 기반 파싱
-- **`students` 컬럼 순서** (9개): 학번, 이름, 성별, 학년, 반, 키(cm), 몸무게(kg), 등록일시, 활성여부 — `birth_date` 없음
+- **`students` 컬럼 순서** (9개): 학번, 이름, 성별, 학년, 반, 키(cm), 몸무게(kg), 등록일시, 활성여부 — `birth_date` 없음. 키/몸무게는 선택값으로 빈 문자열 허용, `rowToStudent`에서 `undefined` 반환(0 아님)
 - **`measurements` 컬럼 순서** (19개): measurement_id, student_id, year, cardio_type/value/grade, muscle_type/value/grade, flexibility_value/grade, agility_type/value/grade, bmi, bmi_grade, total_grade, measured_at, teacher_email
 - **UUID는 클라이언트에서 생성**: `uuid` 라이브러리 사용
 - **측정일시는 KST 저장**: `nowKST()` (`src/api/sheetsClient.js`) 사용 — `new Date().toISOString()` 직접 사용 금지 (UTC 저장됨)
@@ -102,7 +102,8 @@ ClassReportPreview / PersonalGrowthCard
 ```
 /onboarding               — 5단계 온보딩 (인증 불필요, 즉시 로드)
 /                         — Home (Protected)
-/measure/:classId         — 반별 측정
+/measure/:classId                  — 반별 측정 (학급 전체 목록·일괄 저장)
+/measure/:classId/:studentId       — 학생 개별 측정 입력
 /students                 — 학생 관리
 /settings                 — 설정
 /dashboard                — 대시보드 홈 (KPI·등급분포·학년진도)
@@ -152,8 +153,9 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 ## 유틸리티 (`src/utils/`)
 
 - `bmiCalc.js` — BMI 계산 및 등급 판정
-- `gradeCalc.js` — 체력요소별 등급 계산 (grades_standard 기준)
-- `validators.js` — Zod 스키마 기반 측정값 유효성 검사
+- `gradeCalc.js` — `calcGrade()`, `calcTotalGrade()`, `buildGrades()` — grades_standard 기반 등급 계산
+- `gradesStandardSeed.js` — 교육부 공식 PAPS 기준표 상수 (`GRADES_SEED_BY_LEVEL`, `SCHOOL_LEVELS`, `GRADE_RANGE_BY_LEVEL`) — 초등 3~6·중학 1~3·고등 1~3학년 × 성별 × 8종목
+- `validators.js` — Zod 스키마 기반 유효성 검사. `studentSchema`의 height/weight는 optional(`z.preprocess` 패턴). `measurementSchema`에도 height/weight 포함 — 측정 폼에서 입력 시 student 레코드 업데이트 용도
 - `pdfExport.js` — `exportElementToPdf`, `exportMultiPagePdf`, `exportAllPersonalCards`
 - `excelExport.js` — `exportMeasurementsToExcel()` — xlsx 원시 데이터 내보내기
 - `schemaMigration.js` — 스키마 버전 비교·마이그레이션 실행
@@ -180,5 +182,8 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - **OAuth 팝업 닫힘 감지**: `openOAuthPopup` 내부 polling이 `popup.closed` 접근 시 COOP `SecurityError` 발생 → try-catch로 억제. 팝업이 닫히면 `popup_closed` 에러 throw → 호출부에서 `AUTH_EXPIRED` 처리
 - **아이콘 전용 버튼·링크**: `aria-label` 필수 — 없으면 스크린리더가 버튼 목적을 알 수 없음
 - **`<Progress>` 컴포넌트**: `aria-label` 필수 — Radix UI progressbar role은 accessible name이 없으면 Lighthouse 경고 발생
-- **`grades_standard` 시트 시드 미구현**: 템플릿 사본 생성 시 등급 기준 데이터가 비어있음 → 등급 계산 전부 `null` 반환. 온보딩 연동 테스트 후 자동 시드 구현 예정 (옵션 A, `.grades_standard_todo.md` 참고)
+- **`grades_standard` 시드 이후 기존 측정 등급이 null**: 기준표 시드 전에 저장된 측정 기록은 등급 컬럼이 비어있음 → 설정 → 데이터 관리 → "재계산" 버튼으로 일괄 업데이트. `api/measurements.js`의 `batchUpdateMeasurementGrades()` 사용
+- **학급 하드 삭제는 되돌릴 수 없음**: `api/deleteClass.js`의 `deleteClassHard()`는 `batchUpdate deleteDimension`으로 행을 영구 삭제 — 소프트 삭제(`is_active=false`)와 혼동 금지
+- **키/몸무게 측정 시 student 레코드 업데이트**: `ClassMeasure`·`StudentMeasure` 저장 시 폼의 height/weight가 기존 student 값과 다르면 `useUpdateStudent`로 students 시트도 함께 업데이트. 측정 CSV 템플릿 컬럼 순서: `student_id, 이름, 성별, 학년, 반, 키(cm), 몸무게(kg), 심폐, 근력, 유연성, 순발력`
+- **optional 숫자 필드 Zod 패턴**: 빈 문자열·null → undefined 변환이 필요한 숫자 필드는 `z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number()...optional())` 패턴 사용 — `z.coerce.number()`는 빈 문자열을 `NaN`으로 변환해 검증 실패
 
