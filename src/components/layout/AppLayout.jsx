@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Settings, BarChart2, LogOut } from "lucide-react";
+import { Home, Users, Settings, BarChart2, LogOut, Sun, Moon, Monitor } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { revokeToken } from "../../api/sheetsClient";
@@ -16,7 +16,7 @@ export function AppLayout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, clearUser } = useAuthStore();
-  const { schoolName, teacherName, resetSettings } = useSettingsStore();
+  const { schoolName, teacherName, resetSettings, themeMode, setThemeMode } = useSettingsStore();
 
   const handleLogout = () => {
     revokeToken();
@@ -66,6 +66,29 @@ export function AppLayout({ children }) {
               <BarChart2 className="h-4 w-4" />
               <span className="hidden sm:inline">대시보드</span>
             </Link>
+            {/* 테마 토글 */}
+            <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-1">
+              {[
+                { mode: "light", Icon: Sun, label: "주간 모드" },
+                { mode: "auto", Icon: Monitor, label: "자동 모드" },
+                { mode: "dark", Icon: Moon, label: "야간 모드" },
+              ].map(({ mode, Icon, label }) => (
+                <button
+                  key={mode}
+                  onClick={() => setThemeMode(mode)}
+                  aria-label={label}
+                  className={cn(
+                    "p-1 rounded-md transition-colors",
+                    themeMode === mode
+                      ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm"
+                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </button>
+              ))}
+            </div>
+
             <div className="ml-2 flex items-center gap-2">
               {user?.picture && (
                 <img src={user.picture} alt={user.name} className="w-7 h-7 rounded-full" />

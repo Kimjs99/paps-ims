@@ -8,6 +8,9 @@ import {
   Settings,
   LogOut,
   LayoutDashboard,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -34,8 +37,8 @@ function NavItem({ to, label, Icon: ItemIcon, exact, location }) {
       className={cn(
         "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
         isActive
-          ? "bg-blue-50 text-blue-600"
-          : "text-gray-600 hover:bg-gray-100"
+          ? "bg-blue-50 dark:bg-blue-950 text-blue-600"
+          : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
       )}
     >
       <ItemIcon size={17} />
@@ -48,7 +51,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, clearUser } = useAuthStore();
-  const { schoolName, teacherName, resetSettings } = useSettingsStore();
+  const { schoolName, teacherName, resetSettings, themeMode, setThemeMode } = useSettingsStore();
 
   const handleLogout = () => {
     revokeToken();
@@ -60,7 +63,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
-      <header className="bg-white border-b sticky top-0 z-40 print-hidden">
+      <header className="bg-white dark:bg-gray-900 border-b dark:border-gray-700 sticky top-0 z-40 print-hidden">
         <div className="px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="font-bold text-blue-600 text-lg">
@@ -73,6 +76,28 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
             <div className="hidden md:flex items-center gap-4">
               <PollingIndicator />
               <LastUpdatedBar dataUpdatedAt={dataUpdatedAt} />
+            </div>
+            {/* 테마 토글 */}
+            <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+              {[
+                { mode: "light", Icon: Sun, label: "주간 모드" },
+                { mode: "auto", Icon: Monitor, label: "자동 모드" },
+                { mode: "dark", Icon: Moon, label: "야간 모드" },
+              ].map(({ mode, Icon, label }) => (
+                <button
+                  key={mode}
+                  onClick={() => setThemeMode(mode)}
+                  aria-label={label}
+                  className={cn(
+                    "p-1 rounded-md transition-colors",
+                    themeMode === mode
+                      ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm"
+                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  )}
+                >
+                  <Icon size={14} />
+                </button>
+              ))}
             </div>
             <Link
               to="/"
@@ -107,7 +132,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
 
       <div className="flex flex-1">
         {/* 데스크톱 사이드바 */}
-        <aside className="hidden md:flex flex-col w-52 bg-white border-r py-4 px-3 gap-1 sticky top-14 h-[calc(100vh-3.5rem)] print-hidden">
+        <aside className="hidden md:flex flex-col w-52 bg-white dark:bg-gray-900 border-r dark:border-gray-700 py-4 px-3 gap-1 sticky top-14 h-[calc(100vh-3.5rem)] print-hidden">
           {sidebarItems.map((item) => (
             <NavItem key={item.to} {...item} location={location} />
           ))}
@@ -118,12 +143,12 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
       </div>
 
       {/* 푸터 */}
-      <footer className="border-t bg-white py-3 text-center text-xs text-gray-400 print-hidden">
+      <footer className="border-t dark:border-gray-700 bg-white dark:bg-gray-900 py-3 text-center text-xs text-gray-400 print-hidden">
         © 2026 PAPS-IMS · Developed by Kimjs99
       </footer>
 
       {/* 모바일 하단 탭바 */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40 print-hidden">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-700 z-40 print-hidden">
         <div className="flex">
           {sidebarItems.map((item) => {
             const isActive = item.exact
@@ -135,7 +160,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
                 to={item.to}
                 className={cn(
                   "flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors",
-                  isActive ? "text-blue-600" : "text-gray-500"
+                  isActive ? "text-blue-600" : "text-gray-500 dark:text-gray-400"
                 )}
               >
                 <item.Icon size={20} />

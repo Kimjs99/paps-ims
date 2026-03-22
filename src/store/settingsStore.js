@@ -10,8 +10,10 @@ export const useSettingsStore = create(
       teacherName: "",
       schoolLevel: "중학교",
       isOnboardingComplete: false,
+      themeMode: "auto", // "light" | "dark" | "auto"
       setSheetId: (sheetId) => set({ sheetId }),
       setSchoolInfo: (info) => set(info),
+      setThemeMode: (themeMode) => set({ themeMode }),
       completeOnboarding: () => set({ isOnboardingComplete: true }),
       resetSettings: () =>
         set({

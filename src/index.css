@@ -60,6 +60,35 @@
   }
 }
 
+/* ── 다크 모드 전역 오버라이드 ───────────────────────────────── */
+/* Tailwind darkMode: ["class"] 와 함께 동작 — .dark가 <html>에 적용되면 활성화 */
+
+.dark .bg-white          { background-color: hsl(222 47% 11%); }
+.dark .bg-gray-50        { background-color: hsl(222 84% 5%); }
+.dark .bg-gray-100       { background-color: hsl(222 47% 8%); }
+.dark .bg-blue-50        { background-color: hsl(221 70% 10%); }
+
+.dark .text-gray-900     { color: hsl(210 40% 96%); }
+.dark .text-gray-800     { color: hsl(210 40% 90%); }
+.dark .text-gray-700     { color: hsl(210 30% 80%); }
+.dark .text-gray-600     { color: hsl(210 20% 65%); }
+.dark .text-gray-500     { color: hsl(215 15% 52%); }
+.dark .text-gray-400     { color: hsl(215 12% 42%); }
+
+.dark .border            { border-color: hsl(217 32% 20%); }
+.dark .border-b          { border-bottom-color: hsl(217 32% 20%); }
+.dark .border-t          { border-top-color: hsl(217 32% 20%); }
+.dark .border-gray-200   { border-color: hsl(217 32% 20%); }
+.dark .border-blue-200   { border-color: hsl(221 70% 20%); }
+.dark .divide-y > * + *  { border-top-color: hsl(217 32% 20%); }
+
+.dark .hover\:bg-gray-50:hover  { background-color: hsl(222 47% 13%); }
+.dark .hover\:bg-gray-100:hover { background-color: hsl(222 47% 15%); }
+
+.dark .bg-blue-50.border.border-blue-200 { background-color: hsl(221 70% 10%); }
+
+/* ─────────────────────────────────────────────────────────── */
+
 @media print {
   .print-hidden { display: none !important; }
   .print-only { display: block !important; }
