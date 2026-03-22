@@ -6,7 +6,12 @@ import { GradeBadge } from "../../components/ui/GradeBadge";
 import { AreaRadarChart } from "../../components/charts/AreaRadarChart";
 import { YearlyTrendChart } from "../../components/charts/YearlyTrendChart";
 import { useStudents, useMeasurements } from "../../hooks/useSheets";
-import { GRADE_COLORS } from "../../constants/paps";
+import { GRADE_COLORS, CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES, FLEXIBILITY_ITEM } from "../../constants/paps";
+
+const getTypeInfo = (types, typeValue) => {
+  const t = types.find((t) => t.value === typeValue);
+  return t ?? { label: typeValue ?? "—", unit: "" };
+};
 
 // KST 측정일시 표기 (예: "2024-03-12 10:00")
 const formatDatetime = (v) => {
@@ -116,6 +121,12 @@ export default function StudentDetail() {
   // 선택 연도 (null이면 최신 연도로 자동 적용)
   const activeYear = selectedYear ?? availableYears[0] ?? null;
 
+  // 테이블 헤더용 종목 정보 (최신 측정 기준)
+  const latestM = rawMeasurements[0];
+  const headerCardio = getTypeInfo(CARDIO_TYPES, latestM?.cardio_type);
+  const headerMuscle = getTypeInfo(MUSCLE_TYPES, latestM?.muscle_type);
+  const headerAgility = getTypeInfo(AGILITY_TYPES, latestM?.agility_type);
+
   // 추이 차트용: 선택 연도의 측정 기록 (시간순 오름차순)
   const trendMeasurements = useMemo(() => {
     if (!activeYear) return [];
@@ -137,10 +148,13 @@ export default function StudentDetail() {
     })),
   [trendMeasurements]);
 
-  // 전체 기간 영역별 평균 등급 (레이더 + 평균 등급 카드용)
+  // 전체 기간 영역별 평균 등급 + 평균 측정값 (레이더 + 평균 카드 + 테이블 평균 행용)
   const avgRecord = useMemo(() => {
     if (!rawMeasurements.length) return null;
-    const keys = ["cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade", "total_grade"];
+    const keys = [
+      "cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade", "total_grade",
+      "cardio_value", "muscle_value", "flexibility_value", "agility_value", "bmi",
+    ];
     const result = {};
     keys.forEach((key) => {
       const vals = rawMeasurements
@@ -331,35 +345,142 @@ export default function StudentDetail() {
           <div className="bg-white rounded-xl border overflow-hidden">
             <div className="px-4 py-3 border-b bg-gray-50">
               <h3 className="text-sm font-semibold text-gray-700">전체 측정 기록</h3>
-              <p className="text-xs text-gray-400 mt-0.5">측정 회차별 원본 등급</p>
+              <p className="text-xs text-gray-400 mt-0.5">측정 회차별 실측값 및 등급 · 마지막 행: 전체 평균</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    {["측정일시", "연도", "심폐", "근력", "유연", "순발", "BMI", "종합"].map((h) => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                        {h}
-                      </th>
-                    ))}
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">측정일시</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">연도</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                      심폐지구력
+                      {latestM && <div className="font-normal text-gray-400">{headerCardio.label} ({headerCardio.unit})</div>}
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                      근력·근지구력
+                      {latestM && <div className="font-normal text-gray-400">{headerMuscle.label} ({headerMuscle.unit})</div>}
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                      유연성
+                      <div className="font-normal text-gray-400">{FLEXIBILITY_ITEM.label} ({FLEXIBILITY_ITEM.unit})</div>
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                      순발력
+                      {latestM && <div className="font-normal text-gray-400">{headerAgility.label} ({headerAgility.unit})</div>}
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">BMI</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">종합</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {rawMeasurements.map((m) => (
-                    <tr key={m.measurement_id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
-                        {formatDatetime(m.measured_at)}
-                      </td>
-                      <td className="px-3 py-2 font-medium text-gray-700">{m.year}</td>
-                      <td className="px-3 py-2"><GradeBadge grade={m.cardio_grade} /></td>
-                      <td className="px-3 py-2"><GradeBadge grade={m.muscle_grade} /></td>
-                      <td className="px-3 py-2"><GradeBadge grade={m.flexibility_grade} /></td>
-                      <td className="px-3 py-2"><GradeBadge grade={m.agility_grade} /></td>
-                      <td className="px-3 py-2"><GradeBadge grade={m.bmi_grade} /></td>
-                      <td className="px-3 py-2"><GradeBadge grade={m.total_grade} size="sm" /></td>
-                    </tr>
-                  ))}
+                  {rawMeasurements.map((m) => {
+                    const cardioInfo = getTypeInfo(CARDIO_TYPES, m.cardio_type);
+                    const muscleInfo = getTypeInfo(MUSCLE_TYPES, m.muscle_type);
+                    const agilityInfo = getTypeInfo(AGILITY_TYPES, m.agility_type);
+                    return (
+                      <tr key={m.measurement_id} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 text-gray-500 whitespace-nowrap text-xs">
+                          {formatDatetime(m.measured_at)}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-gray-700">{m.year}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-gray-700">
+                              {m.cardio_value != null ? `${m.cardio_value}${cardioInfo.unit}` : "—"}
+                            </span>
+                            <GradeBadge grade={m.cardio_grade} />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-gray-700">
+                              {m.muscle_value != null ? `${m.muscle_value}${muscleInfo.unit}` : "—"}
+                            </span>
+                            <GradeBadge grade={m.muscle_grade} />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-gray-700">
+                              {m.flexibility_value != null ? `${m.flexibility_value}${FLEXIBILITY_ITEM.unit}` : "—"}
+                            </span>
+                            <GradeBadge grade={m.flexibility_grade} />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-gray-700">
+                              {m.agility_value != null ? `${m.agility_value}${agilityInfo.unit}` : "—"}
+                            </span>
+                            <GradeBadge grade={m.agility_grade} />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-gray-700">
+                              {m.bmi != null ? m.bmi : "—"}
+                            </span>
+                            <GradeBadge grade={m.bmi_grade} />
+                          </div>
+                        </td>
+                        <td className="px-3 py-2"><GradeBadge grade={m.total_grade} size="sm" /></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
+                {/* 평균 행 */}
+                {avgRecord && (
+                  <tfoot>
+                    <tr className="bg-blue-50 border-t-2 border-blue-200 font-medium">
+                      <td className="px-3 py-2 text-xs text-blue-700 whitespace-nowrap">평균</td>
+                      <td className="px-3 py-2 text-xs text-blue-500">전체</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm text-blue-700">
+                            {avgRecord.cardio_value != null ? `${avgRecord.cardio_value}` : "—"}
+                          </span>
+                          <GradeBadge grade={avgRecord.cardio_grade != null ? Math.round(avgRecord.cardio_grade) : null} />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm text-blue-700">
+                            {avgRecord.muscle_value != null ? `${avgRecord.muscle_value}` : "—"}
+                          </span>
+                          <GradeBadge grade={avgRecord.muscle_grade != null ? Math.round(avgRecord.muscle_grade) : null} />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm text-blue-700">
+                            {avgRecord.flexibility_value != null ? `${avgRecord.flexibility_value}cm` : "—"}
+                          </span>
+                          <GradeBadge grade={avgRecord.flexibility_grade != null ? Math.round(avgRecord.flexibility_grade) : null} />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm text-blue-700">
+                            {avgRecord.agility_value != null ? `${avgRecord.agility_value}` : "—"}
+                          </span>
+                          <GradeBadge grade={avgRecord.agility_grade != null ? Math.round(avgRecord.agility_grade) : null} />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm text-blue-700">
+                            {avgRecord.bmi != null ? avgRecord.bmi : "—"}
+                          </span>
+                          <GradeBadge grade={avgRecord.bmi_grade != null ? Math.round(avgRecord.bmi_grade) : null} />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <GradeBadge grade={avgRecord.total_grade != null ? Math.round(avgRecord.total_grade) : null} size="sm" />
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           </div>
