@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.10.0] - 2026-03-22
+
+### ✨ Features
+- **키/몸무게 선택 입력** — 학생 등록 시 키/몸무게 필수 → 선택으로 변경, 미입력 시 학생 목록에 `-` 표시 (3be5244)
+- **반별 측정 목록에 키/몸무게 컬럼 추가** — 성별 옆에 키(cm)·몸무게(kg) 입력 필드 추가, 저장 시 학생 정보 자동 업데이트 및 BMI 반영 (3be5244)
+- **개별 측정 폼 신체정보 편집** — 기본 정보 카드를 편집 가능한 입력 필드로 교체, 키/몸무게 입력 시 BMI·등급 실시간 계산 (3be5244)
+- **측정 CSV 템플릿 키/몸무게 컬럼 추가** — 템플릿에 키(cm)·몸무게(kg) 컬럼 추가, 기존 등록값 미리 채움 (신규 학생은 빈 칸), CSV 업로드 파서도 신 컬럼 순서 대응 (3be5244)
+
+## [v0.9.0] - 2026-03-18
+
+### ✨ Features
+- **홈 학급 완전 삭제** — 학급 카드 호버 시 휴지통 버튼 표시, 학급명 직접 입력 확인 후 학생·측정 데이터 영구 삭제 (`api/deleteClass.js` 신규, `batchUpdate deleteDimension` 활용) (092b129)
+- **측정 등급 일괄 재계산** — 설정 → 데이터 관리 → "재계산" 버튼으로 grades_standard 기준표 업데이트 후 기존 측정 기록의 null 등급 일괄 재계산·저장 (092b129)
+
+### 🔧 Chores
+- `api/measurements.js` — `batchUpdateMeasurementGrades` 함수 추가 (values.batchUpdate로 다중 행 업데이트) (092b129)
+- `hooks/useSheets.js` — `useDeleteClassHard` mutation 추가 (092b129)
+
 ## [v0.8.0] - 2026-03-18
 
 ### ✨ Features
