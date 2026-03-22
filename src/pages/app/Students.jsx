@@ -63,13 +63,13 @@ function StudentForm({ onSubmit, isLoading }) {
           {errors.class && <p className="text-xs text-red-500">{errors.class.message}</p>}
         </div>
         <div className="space-y-1">
-          <Label>키 (cm) *</Label>
-          <Input type="number" {...register("height")} placeholder="165" />
+          <Label>키 (cm) <span className="text-gray-400 font-normal text-xs">선택</span></Label>
+          <Input type="number" {...register("height")} placeholder="측정 시 입력 가능" />
           {errors.height && <p className="text-xs text-red-500">{errors.height.message}</p>}
         </div>
         <div className="space-y-1">
-          <Label>몸무게 (kg) *</Label>
-          <Input type="number" {...register("weight")} placeholder="60" />
+          <Label>몸무게 (kg) <span className="text-gray-400 font-normal text-xs">선택</span></Label>
+          <Input type="number" {...register("weight")} placeholder="측정 시 입력 가능" />
           {errors.weight && <p className="text-xs text-red-500">{errors.weight.message}</p>}
         </div>
       </div>
@@ -322,8 +322,8 @@ export default function Students() {
                       <TableCell className="text-center">{s.gender === "M" ? "남" : "여"}</TableCell>
                       <TableCell className="text-center">{s.grade}</TableCell>
                       <TableCell className="text-center">{s.class}</TableCell>
-                      <TableCell className="text-center">{s.height}</TableCell>
-                      <TableCell className="text-center">{s.weight}</TableCell>
+                      <TableCell className="text-center">{s.height ?? "-"}</TableCell>
+                      <TableCell className="text-center">{s.weight ?? "-"}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={s.is_active !== false ? "default" : "secondary"}>
                           {s.is_active !== false ? "활성" : "비활성"}

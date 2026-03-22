@@ -6,7 +6,7 @@ import { ChevronLeft, Save, Loader2 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
-import { useStudents, useMeasurements, useSaveMeasurement } from "../../hooks/useSheets";
+import { useStudents, useMeasurements, useSaveMeasurement, useUpdateStudent } from "../../hooks/useSheets";
 import { useCalculateGrades } from "../../hooks/useGradeCalc";
 import { measurementSchema } from "../../utils/validators";
 import { calcBMI } from "../../utils/bmiCalc";
@@ -38,12 +38,15 @@ export default function StudentMeasure() {
   const { data: students = [] } = useStudents();
   const { data: measurements = [] } = useMeasurements();
   const saveMutation = useSaveMeasurement();
+  const updateStudent = useUpdateStudent();
 
   const student = students.find((s) => s.student_id === studentId);
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(measurementSchema),
     defaultValues: {
+      height: undefined,
+      weight: undefined,
       cardio_type: "shuttle_run",
       cardio_value: null,
       muscle_type: "sit_up",
@@ -54,8 +57,12 @@ export default function StudentMeasure() {
     },
   });
 
-  // 기존 저장된 측정값으로 폼 초기화 (setValue로 개별 설정)
+  // 폼 초기화: 학생 키/몸무게 → 기존 측정값 순으로 설정
   useEffect(() => {
+    if (student) {
+      setValue("height", student.height ?? undefined);
+      setValue("weight", student.weight ?? undefined);
+    }
     const existing = measurements.find(
       (m) => m.student_id === studentId && m.year === schoolYear
     );
@@ -67,25 +74,42 @@ export default function StudentMeasure() {
     setValue("flexibility_value", existing.flexibility_value ?? null);
     setValue("agility_type", existing.agility_type || "sprint_50m");
     setValue("agility_value", existing.agility_value ?? null);
-  }, [measurements, studentId, schoolYear, setValue]);
+  }, [measurements, student, studentId, schoolYear, setValue]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValues = watch();
-  const grades = useCalculateGrades(watchedValues, student);
-  const bmi = student ? calcBMI(student.height, student.weight) : null;
+  // 폼에서 입력한 키/몸무게를 등급 계산에 반영
+  const studentWithFormBody = student
+    ? { ...student, height: watchedValues.height ?? student.height, weight: watchedValues.weight ?? student.weight }
+    : student;
+  const grades = useCalculateGrades(watchedValues, studentWithFormBody);
+  const bmi = calcBMI(watchedValues.height ?? student?.height, watchedValues.weight ?? student?.weight);
 
   const onSubmit = async (data) => {
     if (!student) return;
+    const { height, weight, ...measureFields } = data;
     const measurement = {
       measurement_id: uuidv4(),
       student_id: student.student_id,
       year: schoolYear,
-      ...data,
+      ...measureFields,
       ...(grades || {}),
       bmi,
       teacher_email: user?.email || "",
     };
     try {
+      // 키/몸무게가 변경된 경우 학생 정보 업데이트
+      const heightChanged = height !== undefined && height !== student.height;
+      const weightChanged = weight !== undefined && weight !== student.weight;
+      if (heightChanged || weightChanged) {
+        const rowIndex = students.findIndex((s) => s.student_id === studentId);
+        if (rowIndex !== -1) {
+          await updateStudent.mutateAsync({
+            rowIndex,
+            student: { ...student, height: height ?? student.height, weight: weight ?? student.weight },
+          });
+        }
+      }
       await saveMutation.mutateAsync(measurement);
       toast.success("측정 데이터가 저장됐습니다.");
       navigate(`/measure/${classId}`);
@@ -121,11 +145,36 @@ export default function StudentMeasure() {
         <div className="lg:col-span-2 space-y-4">
           {/* 기본 정보 카드 */}
           <Card>
-            <CardHeader><CardTitle className="text-base">기본 정보</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-3 gap-4 text-sm">
-              <div><span className="text-gray-500">키</span><p className="font-semibold">{student.height} cm</p></div>
-              <div><span className="text-gray-500">몸무게</span><p className="font-semibold">{student.weight} kg</p></div>
-              <div><span className="text-gray-500">BMI</span><p className="font-semibold">{bmi ?? "-"}</p></div>
+            <CardHeader><CardTitle className="text-base">신체 정보 (BMI)</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <Label className="text-sm text-gray-500">키 (cm)</Label>
+                <Controller name="height" control={control} render={({ field }) => (
+                  <Input type="number" inputMode="decimal"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                    placeholder="예: 165"
+                    className={errors.height ? "border-red-400" : ""}
+                  />
+                )} />
+                {errors.height && <p className="text-xs text-red-500">{errors.height.message}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm text-gray-500">몸무게 (kg)</Label>
+                <Controller name="weight" control={control} render={({ field }) => (
+                  <Input type="number" inputMode="decimal"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                    placeholder="예: 60"
+                    className={errors.weight ? "border-red-400" : ""}
+                  />
+                )} />
+                {errors.weight && <p className="text-xs text-red-500">{errors.weight.message}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm text-gray-500">BMI</Label>
+                <p className="h-10 flex items-center font-semibold text-sm">{bmi ?? "-"}</p>
+              </div>
             </CardContent>
           </Card>
 

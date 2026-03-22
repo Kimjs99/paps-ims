@@ -8,8 +8,8 @@ const rowToStudent = (row) => ({
   gender: row[2] || "",
   grade: Number(row[3]) || 0,
   class: Number(row[4]) || 0,
-  height: Number(row[5]) || 0,
-  weight: Number(row[6]) || 0,
+  height: Number(row[5]) || undefined,
+  weight: Number(row[6]) || undefined,
   created_at: row[7] || "",
   is_active: String(row[8]).toLowerCase() !== "false",
 });
@@ -17,7 +17,7 @@ const rowToStudent = (row) => ({
 // 학생 객체 → 행 배열 변환
 const studentToRow = (s) => [
   s.student_id, s.name, s.gender, s.grade, s.class,
-  s.height, s.weight,
+  s.height ?? "", s.weight ?? "",
   s.created_at || nowKST(), s.is_active ?? true,
 ];
 
