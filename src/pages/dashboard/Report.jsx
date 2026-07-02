@@ -78,7 +78,9 @@ export default function Report() {
 
   // 보고서용: 원시 측정값에서 학생별 평균 등급 산출 (최우수 병합 없음)
   const reportMeasurements = useMemo(() => {
-    let raw = measurements;
+    // 활성 학생 필터 무조건 선행 — 학년/반 무필터 시에도 비활성 학생 제외
+    const activeIds = new Set(activeStudents.map((s) => s.student_id));
+    let raw = measurements.filter((m) => activeIds.has(m.student_id));
     if (filterYear) raw = raw.filter((m) => String(m.year) === filterYear);
     if (filterGrade || filterClass) {
       raw = raw.filter((m) => {

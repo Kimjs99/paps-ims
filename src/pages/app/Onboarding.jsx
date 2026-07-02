@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, AlertCircle, Loader2, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -14,6 +15,7 @@ import { initGoogleAuth, requestAccessToken } from "../../api/sheetsClient";
 import { getSettings, checkSchemaVersion } from "../../api/settings";
 import { isGradesStandardEmpty, seedGradesStandard } from "../../api/gradesStandard";
 import { SCHOOL_LEVELS } from "../../utils/gradesStandardSeed";
+import { SCHEMA_VERSION } from "../../constants/paps";
 
 const STEPS = [
   { id: 1, title: "Google 로그인" },
@@ -31,6 +33,7 @@ const extractSheetId = (input) => {
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, isAuthenticated, setUser } = useAuthStore();
   const { sheetId, setSheetId, schoolName, schoolYear, teacherName, schoolLevel, setSchoolInfo, completeOnboarding } = useSettingsStore();
 
@@ -101,17 +104,18 @@ export default function Onboarding() {
       if (isVersionOk) {
         setTestResult("success");
         setTestMessage("연동 성공! 스키마 버전이 일치합니다.");
+        // 검증 성공 시에만 Sheet ID 저장
+        setSheetId(extracted);
       } else {
         const settings = await getSettings(extracted);
         if (settings["SCHEMA_VERSION"]) {
           setTestResult("error");
-          setTestMessage(`스키마 버전 불일치: ${settings["SCHEMA_VERSION"]} (필요: 1.0)`);
+          setTestMessage(`스키마 버전 불일치: ${settings["SCHEMA_VERSION"]} (필요: ${SCHEMA_VERSION})`);
         } else {
           setTestResult("error");
           setTestMessage("올바른 PAPS-IMS 템플릿 Sheet가 아닙니다.");
         }
       }
-      setSheetId(extracted);
     } catch {
       setTestResult("error");
       setTestMessage("Sheet에 접근할 수 없습니다. Sheet ID를 확인하고, 공유 설정을 확인해주세요.");
@@ -135,6 +139,7 @@ export default function Onboarding() {
       const empty = await isGradesStandardEmpty(sheetId);
       if (empty) {
         await seedGradesStandard(sheetId, schoolForm.schoolLevel);
+        queryClient.invalidateQueries({ queryKey: ["grades_standard"] });
       }
       setSeedingStatus("done");
     } catch (err) {

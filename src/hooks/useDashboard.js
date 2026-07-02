@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMeasurements, useStudents } from "./useSheets";
+import { useSettingsStore } from "../store/settingsStore";
+import { GRADE_RANGE_BY_LEVEL } from "../utils/gradesStandardSeed";
 
 /**
  * 동일 학생의 중복 측정 데이터를 병합한다.
@@ -154,8 +156,12 @@ export const useDashboardData = (filters = {}) => {
     }));
   }, [filtered]);
 
+  const schoolLevel = useSettingsStore((s) => s.schoolLevel);
+
   const gradeProgress = useMemo(() => {
-    return [1, 2, 3].map((g) => {
+    // 학교급별 학년 범위 (초등 1~6, 중·고 1~3)
+    const gradeRange = GRADE_RANGE_BY_LEVEL[schoolLevel] || GRADE_RANGE_BY_LEVEL["중학교"];
+    return gradeRange.map((g) => {
       const gradeStudents = activeStudents.filter((s) => Number(s.grade) === g);
       const gradeMeasured = new Set(
         filtered
@@ -173,7 +179,7 @@ export const useDashboardData = (filters = {}) => {
             : 0,
       };
     });
-  }, [filtered, activeStudents]);
+  }, [filtered, activeStudents, schoolLevel]);
 
   const areaAvgs = useMemo(() => {
     const areas = [

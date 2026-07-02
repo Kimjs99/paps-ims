@@ -21,6 +21,14 @@ export const seedGradesStandard = async (sheetId, schoolLevel) => {
   const header = ["grade_level", "gender", "item", "grade1_min", "grade2_min", "grade3_min", "grade4_min", "grade5_min", "higher_is_better"];
   const values = [header, ...rows.map((row) => row.map(String))];
 
+  // 기존 데이터 범위 clear — 행 수가 다른 기준표로 재시드할 때 잔행 방지 (예: 초등 56행 → 중·고 48행)
+  await withRetry(() =>
+    sheetsRequest({
+      method: "POST",
+      path: `/${sheetId}/values/${SHEET_NAMES.GRADES_STANDARD}!A1:I:clear`,
+    })
+  );
+
   await withRetry(() =>
     sheetsRequest({
       method: "PUT",

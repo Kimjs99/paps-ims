@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.12.1] - 2026-07-03
+
+### 🐛 Bug Fixes (전수 리뷰 버그 배치 — 입력 손실 / 정확성 / 인증·동시성)
+
+**입력 손실 방지**
+- **30초 폴링 폼 리셋 제거** — 측정 입력 중 refetch(폴링·창 포커스)가 폼·종목 선택을 서버값으로 되돌리던 문제. `useMeasurements(sheetId, { poll })` 옵션 + 프리필 1회 가드(`initializedRef`)로 입력 보존 (`StudentMeasure`·`ClassMeasure`)
+- **학급 재저장 전원 중복 append 방지** — 프리필 스냅샷(baseline) 대비 변경(dirty)된 학생만 저장. 종목(Select)만 바꿔도 해당 영역 값이 있는 행은 재저장 대상 (`classMeasureDirty.js` 신규 순수 함수 + 테스트)
+- **미저장 이탈 경고** — 저장 대상 판정과 동일 기준의 `beforeunload` 경고 추가
+
+**정확성**
+- **NaN 저장 방지** — 측정값 파서 `toNumOrNull`로 빈 값/비숫자 안전 처리 (`api/measurements.js`)
+- **등급 재계산 시 BMI 이력 보존** — 일괄 재계산이 기존 BMI 값을 유실하던 문제 수정 (`Settings`)
+- **초등 4~6학년 등록 불가 수정** — 학교급별 학년 범위(`makeStudentSchema(schoolLevel)` 팩토리 + `GRADE_RANGE_BY_LEVEL`)로 Zod 스키마·CSV 업로드·대시보드 학년 진도 일원화
+- **보고서 비활성 학생 혼입 수정** — `Report` 집계 전 활성 학생 필터 선행
+- **`endurance_run` 유효 범위 키 정정** (`constants/paps.js`)
+- **CSV 업로드 Zod 검증** — `safeParse`로 행 단위 오류 수집·표시 (`Students`)
+- **기준표 시드 잔행 방지** — 시드 전 `A1:I:clear`, 온보딩 완료 시 `grades_standard` 쿼리 무효화 (`gradesStandard`·`Onboarding`)
+
+**인증·동시성**
+- **토큰 만료 강제 로그아웃 제거** — 백그라운드 갱신 실패 시 페이지 이동 없이 재로그인 배너 표시(입력값 보존), 사용자 제스처 시점 팝업으로 차단 없이 재인증 (`AuthExpiredBanner` 신규, `App`·`authStore`)
+- **토큰 갱신 경쟁 제거** — `getValidToken` in-flight Promise 공유(mutex), 갱신 실패 시 token+expiry 동시 정리 (`sheetsClient`)
+- **rowIndex 동시성 가드** — 쓰기 직전 key 컬럼 재조회·대조 후 불일치 시 중단(`ROW_MISMATCH`): `updateStudent`·`batchUpdateMeasurementGrades`·`deleteClassHard`(재계산 대조 후 내림차순 삭제) (`api/rowGuard.js` 신규)
+- **Sheets 오류 메시지 견고화** — 비JSON 오류 응답(HTML 등) 폴백 처리 (`sheetsClient`)
+
+### ✅ Tests
+- Vitest 185 → **211 케이스** (+26): dirty 선별·종목 변경 재저장, 토큰 mutex, ROW_MISMATCH 3종, deleteClass 가드 6종, authExpired 스토어, 낡은 테스트 4건 계약 갱신(AUTH_EXPIRED·height/weight undefined)
+
 ## [v0.12.0] - 2026-03-22
 
 ### ✨ Features

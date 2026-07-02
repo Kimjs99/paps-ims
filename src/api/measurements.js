@@ -1,5 +1,9 @@
 import { sheetsRequest, withRetry, nowKST } from "./sheetsClient";
 import { SHEET_NAMES } from "../constants/paps";
+import { fetchKeyColumn, rowMismatchError } from "./rowGuard";
+
+// 셀 값 → 숫자 또는 null (Sheets API가 트레일링 빈 셀을 잘라 undefined가 될 수 있음 — NaN 방지)
+const toNumOrNull = (v) => (v != null && v !== "" ? Number(v) : null);
 
 // 행 배열 → 측정 객체 변환
 const rowToMeasurement = (row) => ({
@@ -7,19 +11,19 @@ const rowToMeasurement = (row) => ({
   student_id: row[1] || "",
   year: Number(row[2]) || 0,
   cardio_type: row[3] || "",
-  cardio_value: row[4] !== "" ? Number(row[4]) : null,
-  cardio_grade: row[5] !== "" ? Number(row[5]) : null,
+  cardio_value: toNumOrNull(row[4]),
+  cardio_grade: toNumOrNull(row[5]),
   muscle_type: row[6] || "",
-  muscle_value: row[7] !== "" ? Number(row[7]) : null,
-  muscle_grade: row[8] !== "" ? Number(row[8]) : null,
-  flexibility_value: row[9] !== "" ? Number(row[9]) : null,
-  flexibility_grade: row[10] !== "" ? Number(row[10]) : null,
+  muscle_value: toNumOrNull(row[7]),
+  muscle_grade: toNumOrNull(row[8]),
+  flexibility_value: toNumOrNull(row[9]),
+  flexibility_grade: toNumOrNull(row[10]),
   agility_type: row[11] || "",
-  agility_value: row[12] !== "" ? Number(row[12]) : null,
-  agility_grade: row[13] !== "" ? Number(row[13]) : null,
-  bmi: row[14] !== "" ? Number(row[14]) : null,
-  bmi_grade: row[15] !== "" ? Number(row[15]) : null,
-  total_grade: row[16] !== "" ? Number(row[16]) : null,
+  agility_value: toNumOrNull(row[12]),
+  agility_grade: toNumOrNull(row[13]),
+  bmi: toNumOrNull(row[14]),
+  bmi_grade: toNumOrNull(row[15]),
+  total_grade: toNumOrNull(row[16]),
   measured_at: row[17] || "",
   teacher_email: row[18] || "",
 });
@@ -60,6 +64,13 @@ export const saveMeasurement = async (sheetId, measurement) => {
 // items: [{ rowIndex: number (0-based array index), measurement: object }]
 export const batchUpdateMeasurementGrades = async (sheetId, items) => {
   if (!items.length) return;
+  // 쓰기 직전 key 컬럼 재조회 — 모든 rowIndex가 최신 시트에서도 같은 measurement_id를 가리키는지 검증 (동시성 보호)
+  const keys = await fetchKeyColumn(sheetId, SHEET_NAMES.MEASUREMENTS);
+  const hasMismatch = items.some(
+    ({ rowIndex, measurement }) => keys[rowIndex] !== measurement.measurement_id
+  );
+  if (hasMismatch) throw rowMismatchError();
+
   const data = items.map(({ rowIndex, measurement }) => ({
     range: `${SHEET_NAMES.MEASUREMENTS}!A${rowIndex + 2}:S${rowIndex + 2}`,
     values: [measurementToRow(measurement)],

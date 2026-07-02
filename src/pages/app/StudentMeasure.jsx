@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,13 +36,14 @@ export default function StudentMeasure() {
   const { user } = useAuthStore();
   const { schoolYear } = useSettingsStore();
   const { data: students = [] } = useStudents();
-  const { data: measurements = [] } = useMeasurements();
+  // poll: false — 30초 폴링이 입력 중인 폼을 저장값으로 되돌리는 것 방지
+  const { data: measurements = [], isFetched: measurementsFetched } = useMeasurements({ poll: false });
   const saveMutation = useSaveMeasurement();
   const updateStudent = useUpdateStudent();
 
   const student = students.find((s) => s.student_id === studentId);
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setValue, formState: { errors, isDirty } } = useForm({
     resolver: zodResolver(measurementSchema),
     defaultValues: {
       height: undefined,
@@ -57,16 +58,20 @@ export default function StudentMeasure() {
     },
   });
 
-  // 폼 초기화: 학생 키/몸무게 → 기존 측정값 순으로 설정
+  // 폼 초기화 1회 실행 가드 — refetch로 measurements identity가 바뀌어도 입력 중인 폼을 되돌리지 않음
+  const initializedRef = useRef(false);
+
+  // 폼 초기화: 학생 키/몸무게 → 기존 측정값 순으로 설정 (데이터 준비 후 1회만)
   useEffect(() => {
-    if (student) {
-      setValue("height", student.height ?? undefined);
-      setValue("weight", student.weight ?? undefined);
-    }
+    if (initializedRef.current) return;
+    if (!student || !measurementsFetched) return;
+    initializedRef.current = true;
+    setValue("height", student.height ?? undefined);
+    setValue("weight", student.weight ?? undefined);
     const existing = measurements.find(
       (m) => m.student_id === studentId && m.year === schoolYear
     );
-    if (!existing) return;
+    if (!existing?.measurement_id) return;
     setValue("cardio_type", existing.cardio_type || "shuttle_run");
     setValue("cardio_value", existing.cardio_value ?? null);
     setValue("muscle_type", existing.muscle_type || "sit_up");
@@ -74,7 +79,22 @@ export default function StudentMeasure() {
     setValue("flexibility_value", existing.flexibility_value ?? null);
     setValue("agility_type", existing.agility_type || "sprint_50m");
     setValue("agility_value", existing.agility_value ?? null);
-  }, [measurements, student, studentId, schoolYear, setValue]);
+  }, [measurements, measurementsFetched, student, studentId, schoolYear, setValue]);
+
+  // 저장 성공 후에는 이탈 경고 생략 (navigate 직전 unload 경고 방지)
+  const savedRef = useRef(false);
+
+  // 미저장 입력(dirty) 상태에서 새로고침/창 닫기 경고
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e) => {
+      if (savedRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValues = watch();
@@ -111,10 +131,17 @@ export default function StudentMeasure() {
         }
       }
       await saveMutation.mutateAsync(measurement);
+      savedRef.current = true; // 저장 완료 — 이탈 경고 해제
       toast.success("측정 데이터가 저장됐습니다.");
       navigate(`/measure/${classId}`);
-    } catch {
-      toast.error("저장에 실패했습니다. 다시 시도해주세요.");
+    } catch (err) {
+      if (err?.code === "ROW_MISMATCH") {
+        toast.error(err.message);
+      } else {
+        toast.error("저장에 실패했습니다. 다시 시도해주세요.");
+      }
+      saveMutation.reset();
+      updateStudent.reset();
     }
   };
 

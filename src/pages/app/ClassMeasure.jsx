@@ -20,6 +20,7 @@ import {
 } from "../../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { toast } from "../../store/toastStore";
+import { buildBaseline, selectDirtyStudents } from "./classMeasureDirty";
 
 // 유효 범위 체크
 const isOutOfRange = (field, value) => {
@@ -37,7 +38,8 @@ export default function ClassMeasure() {
   const [grade, cls] = classId.split("-").map(Number);
 
   const { data: students = [], isLoading } = useStudents();
-  const { data: measurements = [] } = useMeasurements();
+  // poll: false — 30초 폴링이 입력 중인 폼/종목 선택을 되돌리는 것 방지
+  const { data: measurements = [], isFetched: measurementsFetched } = useMeasurements({ poll: false });
   const { data: gradesData } = useGradesStandard();
   const saveBatch = useSaveMeasurementsBatch();
   const updateStudent = useUpdateStudent();
@@ -78,10 +80,20 @@ export default function ClassMeasure() {
     return {};
   });
 
-  // 저장된 측정값 + 학생 키/몸무게를 폼에 반영 (localStorage 초안 없는 학생만)
+  // 프리필 시점 스냅샷 (서버 저장값 기준) — 저장 시 dirty 판정의 기준선
+  const [baseline, setBaseline] = useState({});
+  // 프리필 시점 종목 스냅샷 — 값이 그대로여도 종목이 바뀌면 저장 대상이 되도록
+  const [baselineTypes, setBaselineTypes] = useState(null);
+  // 프리필 1회 실행 가드 — 폴링/리포커스 refetch로 폼·종목 선택이 되돌아가는 것 방지
+  const initializedRef = useRef(false);
+
+  // 저장된 측정값 + 학생 키/몸무게를 폼에 반영 (localStorage 초안 없는 학생만) — 데이터 준비 후 1회만
   useEffect(() => {
-    if (!classStudents.length) return;
+    if (initializedRef.current) return;
+    if (!classStudents.length || !measurementsFetched) return;
+    initializedRef.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBaseline(buildBaseline(classStudents, existingMeasurements));
     setFormValues((prev) => {
       const next = { ...prev };
       classStudents.forEach((s) => {
@@ -106,14 +118,42 @@ export default function ClassMeasure() {
       });
       return next;
     });
-    // 저장된 종목 타입 복원
+    // 저장된 종목 타입 복원 + 종목 스냅샷 (미저장 시 기본값이 기준선)
     const first = Object.values(existingMeasurements)[0];
-    if (first) {
-      if (first.cardio_type) setCardioType(first.cardio_type);
-      if (first.muscle_type) setMuscleType(first.muscle_type);
-      if (first.agility_type) setAgilityType(first.agility_type);
-    }
-  }, [classStudents, existingMeasurements]);
+    const restoredTypes = {
+      cardio: first?.cardio_type || "shuttle_run",
+      muscle: first?.muscle_type || "sit_up",
+      agility: first?.agility_type || "sprint_50m",
+    };
+    setCardioType(restoredTypes.cardio);
+    setMuscleType(restoredTypes.muscle);
+    setAgilityType(restoredTypes.agility);
+    setBaselineTypes(restoredTypes);
+  }, [classStudents, existingMeasurements, measurementsFetched]);
+
+  // 프리필 이후 종목이 바뀐 영역 — 값이 그대로여도 해당 영역 값이 있는 행은 저장 대상
+  const changedAreas = baselineTypes
+    ? [
+        ...(cardioType !== baselineTypes.cardio ? ["cardio"] : []),
+        ...(muscleType !== baselineTypes.muscle ? ["muscle"] : []),
+        ...(agilityType !== baselineTypes.agility ? ["agility"] : []),
+      ]
+    : [];
+
+  // 미저장 변경 여부 — 저장 전 이탈 경고용 (저장 대상 판정과 동일 기준)
+  const hasUnsavedChanges =
+    selectDirtyStudents(classStudents, formValues, baseline, changedAreas).length > 0;
+
+  // 미저장 상태에서 새로고침/창 닫기 경고
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges]);
 
   const handleChange = (studentId, field, value) => {
     const next = {
@@ -132,12 +172,10 @@ export default function ClassMeasure() {
       toast.error("등급 기준 데이터가 로드되지 않았습니다. 잠시 후 다시 시도하세요.");
       return;
     }
-    const toBeSaved = classStudents.filter((s) => {
-      const v = formValues[s.student_id];
-      return v && Object.values(v).some((val) => val !== "" && val !== null);
-    });
+    // 프리필 스냅샷과 달라진(dirty) 학생만 저장 — 무변경 학생 재저장 시 중복 append 방지
+    const toBeSaved = selectDirtyStudents(classStudents, formValues, baseline, changedAreas);
     if (toBeSaved.length === 0) {
-      toast.error("입력된 측정값이 없습니다.");
+      toast.info("변경된 학생이 없습니다.");
       return;
     }
 
@@ -188,10 +226,22 @@ export default function ClassMeasure() {
         }
       }
       await saveBatch.mutateAsync(mList);
+      // 저장 성공 → 저장된 학생의 현재 값을 새 스냅샷으로 (재클릭 시 무변경 판정)
+      setBaseline((prev) => {
+        const next = { ...prev };
+        toBeSaved.forEach((s) => {
+          next[s.student_id] = { ...formValues[s.student_id] };
+        });
+        return next;
+      });
+      // 저장된 종목이 새 기준선 — 종목만 다시 바꾸면 재저장 대상이 되도록
+      setBaselineTypes({ cardio: cardioType, muscle: muscleType, agility: agilityType });
       localStorage.removeItem(`paps_draft_${classId}_${schoolYear}`);
       toast.success(`${mList.length}명 측정 데이터가 저장됐습니다.`);
     } catch (err) {
-      if (err?.message === "QUOTA_EXCEEDED") {
+      if (err?.code === "ROW_MISMATCH") {
+        toast.error(err.message);
+      } else if (err?.message === "QUOTA_EXCEEDED") {
         toast.error("Google Sheets API 한도 초과. 잠시 후 자동 재시도됩니다.");
       } else {
         toast.error("저장에 실패했습니다. 데이터는 임시저장됐습니다.");

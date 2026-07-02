@@ -5,7 +5,7 @@ import { useToastStore, toast } from '../store/toastStore';
 
 // Zustand 스토어 상태를 테스트 전 초기화
 const resetAuthStore = () =>
-  useAuthStore.setState({ user: null, isAuthenticated: false });
+  useAuthStore.setState({ user: null, isAuthenticated: false, authExpired: false });
 
 const resetSettingsStore = () =>
   useSettingsStore.setState({
@@ -50,6 +50,23 @@ describe('authStore', () => {
   it('setUser(null) 호출 시 isAuthenticated=false', () => {
     useAuthStore.getState().setUser(null);
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('초기 상태: authExpired=false', () => {
+    expect(useAuthStore.getState().authExpired).toBe(false);
+  });
+
+  it('setAuthExpired(true) 호출 시 재인증 배너 플래그가 켜진다', () => {
+    useAuthStore.getState().setAuthExpired(true);
+    expect(useAuthStore.getState().authExpired).toBe(true);
+    useAuthStore.getState().setAuthExpired(false);
+    expect(useAuthStore.getState().authExpired).toBe(false);
+  });
+
+  it('clearUser 호출 시 authExpired도 초기화된다', () => {
+    useAuthStore.getState().setAuthExpired(true);
+    useAuthStore.getState().clearUser();
+    expect(useAuthStore.getState().authExpired).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getMeasurements, saveMeasurement, saveMeasurementsBatch, getStudentMeasurements } from '../api/measurements';
+import { getMeasurements, saveMeasurement, saveMeasurementsBatch, getStudentMeasurements, batchUpdateMeasurementGrades } from '../api/measurements';
 
 vi.mock('../api/sheetsClient', () => ({
   sheetsRequest: vi.fn(),
@@ -166,6 +166,43 @@ describe('saveMeasurementsBatch', () => {
     await saveMeasurementsBatch(SHEET_ID, measurements);
     const call = sheetsRequest.mock.calls[0][0];
     expect(call.body.values).toHaveLength(2);
+  });
+});
+
+describe('batchUpdateMeasurementGrades', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('key 일치 시 measurements key 컬럼 재조회 후 values:batchUpdate 호출', async () => {
+    sheetsRequest.mockResolvedValueOnce({ values: [['M001'], ['M002']] }); // key 컬럼 재조회
+    sheetsRequest.mockResolvedValueOnce({}); // batchUpdate
+    const items = [
+      { rowIndex: 0, measurement: { measurement_id: 'M001', student_id: 'S001', year: 2024 } },
+      { rowIndex: 1, measurement: { measurement_id: 'M002', student_id: 'S002', year: 2024 } },
+    ];
+    await batchUpdateMeasurementGrades(SHEET_ID, items);
+    expect(sheetsRequest.mock.calls[0][0].path).toContain('A2:A');
+    const writeCall = sheetsRequest.mock.calls[1][0];
+    expect(writeCall.path).toContain('values:batchUpdate');
+    expect(writeCall.body.data).toHaveLength(2);
+    expect(writeCall.body.data[0].range).toContain('A2:S2');
+  });
+
+  it('key 불일치(행 밀림) 시 ROW_MISMATCH throw + 쓰기 미호출', async () => {
+    // 다른 탭에서 행이 삭제돼 rowIndex 1이 다른 측정 기록을 가리키는 상황
+    sheetsRequest.mockResolvedValueOnce({ values: [['M001'], ['M999']] });
+    const items = [
+      { rowIndex: 0, measurement: { measurement_id: 'M001', student_id: 'S001', year: 2024 } },
+      { rowIndex: 1, measurement: { measurement_id: 'M002', student_id: 'S002', year: 2024 } },
+    ];
+    await expect(batchUpdateMeasurementGrades(SHEET_ID, items)).rejects.toMatchObject({
+      code: 'ROW_MISMATCH',
+    });
+    expect(sheetsRequest).toHaveBeenCalledTimes(1); // 재조회만 — batchUpdate 미호출
+  });
+
+  it('빈 items면 아무 요청도 하지 않음', async () => {
+    await batchUpdateMeasurementGrades(SHEET_ID, []);
+    expect(sheetsRequest).not.toHaveBeenCalled();
   });
 });
 

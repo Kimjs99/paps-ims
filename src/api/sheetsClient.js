@@ -83,6 +83,10 @@ export const initGoogleAuth = () => Promise.resolve();
 // 토큰 요청 (로그인 팝업) — 커스텀 팝업 flow 사용
 export const requestAccessToken = () => openOAuthPopup("select_account");
 
+// 무음 갱신 in-flight 공유 (mutex) — 만료 시점에 여러 쿼리가 동시에 getValidToken을 호출해도
+// 팝업이 1개만 열리도록 진행 중인 갱신 Promise를 공유한다
+let refreshPromise = null;
+
 // 토큰 유효성 확인
 export const getValidToken = async () => {
   const token = sessionStorage.getItem("gapi_token");
@@ -91,13 +95,19 @@ export const getValidToken = async () => {
     return token;
   }
   // 토큰 만료 → 커스텀 팝업으로 자동 갱신 (prompt:none = 사용자 상호작용 없이 시도)
-  try {
-    const result = await openOAuthPopup("none");
-    return result.access_token;
-  } catch {
-    sessionStorage.removeItem("gapi_token");
-    throw new Error("AUTH_EXPIRED");
+  if (!refreshPromise) {
+    refreshPromise = openOAuthPopup("none")
+      .then((result) => result.access_token)
+      .catch(() => {
+        sessionStorage.removeItem("gapi_token");
+        sessionStorage.removeItem("gapi_token_expiry");
+        throw new Error("AUTH_EXPIRED");
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
   }
+  return refreshPromise;
 };
 
 // 로그아웃
@@ -146,13 +156,26 @@ export const sheetsRequest = async ({ method = "GET", path, body } = {}) => {
   }
   if (res.status === 401) {
     sessionStorage.removeItem("gapi_token");
+    sessionStorage.removeItem("gapi_token_expiry");
     const err = new Error("AUTH_EXPIRED");
     err.status = 401;
     throw err;
   }
   if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error?.message || "SHEETS_API_ERROR");
+    // 비JSON 에러 응답(HTML 오류 페이지 등)에서 res.json() throw로 원인이 은폐되지 않도록 text 폴백
+    let message = `SHEETS_API_ERROR (HTTP ${res.status})`;
+    try {
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text);
+        message = data.error?.message || message;
+      } catch {
+        if (text) message = text.slice(0, 200);
+      }
+    } catch {
+      // 본문 읽기 실패 — 상태 코드 메시지 유지
+    }
+    throw new Error(message);
   }
   return res.json();
 };

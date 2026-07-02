@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
 import { useSettingsStore } from "./store/settingsStore";
 import { initGoogleAuth } from "./api/sheetsClient";
@@ -33,21 +33,25 @@ function PageLoader() {
   );
 }
 
+// AUTH_EXPIRED 시 강제 페이지 이동 대신 전역 재인증 배너를 올린다
+// — 백그라운드 갱신 실패(사용자 제스처 없는 팝업 차단)가 측정 입력 중 폼을 유실시키지 않도록.
+//   Mutation 실패는 기존 호출부 toast 경로가 그대로 동작하며, 배너 재로그인 후 재시도 가능.
+const raiseAuthExpiredBanner = (error) => {
+  if (error?.message === "AUTH_EXPIRED") {
+    useAuthStore.getState().setAuthExpired(true);
+  }
+};
+
 const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: (error) => {
-      if (error?.message === "AUTH_EXPIRED") {
-        useAuthStore.getState().clearUser();
-        window.location.href = "/onboarding";
-      }
-    },
-  }),
+  queryCache: new QueryCache({ onError: raiseAuthExpiredBanner }),
+  mutationCache: new MutationCache({ onError: raiseAuthExpiredBanner }),
   defaultOptions: {
     queries: {
       staleTime: 30 * 1000,
       refetchOnWindowFocus: true,
       retry: (failureCount, error) => {
-        if (error?.status === 401) return false;
+        // 인증 만료는 재시도해도 무음 팝업이 다시 차단될 뿐 — 즉시 중단
+        if (error?.status === 401 || error?.message === "AUTH_EXPIRED") return false;
         return failureCount < 2;
       },
     },

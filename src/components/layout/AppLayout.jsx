@@ -5,6 +5,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { revokeToken } from "../../api/sheetsClient";
 import { cn } from "../../lib/utils";
 import { SchemaMigrationBanner } from "./SchemaMigrationBanner";
+import { AuthExpiredBanner } from "./AuthExpiredBanner";
 
 const navItems = [
   { to: "/", label: "홈", Icon: Home },
@@ -107,6 +108,9 @@ export function AppLayout({ children }) {
           </div>
         </div>
       </header>
+
+      {/* 세션 만료 재인증 배너 */}
+      <AuthExpiredBanner />
 
       {/* 스키마 마이그레이션 배너 */}
       <SchemaMigrationBanner />

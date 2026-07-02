@@ -53,7 +53,7 @@ export const SHEET_NAMES = {
 // 측정값 유효 범위 (이상값 감지용)
 export const VALID_RANGES = {
   shuttle_run: { min: 0, max: 150 },
-  endurance_run_sec: { min: 300, max: 3600 }, // 5분~60분 (초 단위)
+  endurance_run: { min: 300, max: 3600 }, // 오래달리기-걷기 — 단위: 초 (5분~60분)
   step_test: { min: 0, max: 100 },
   sit_up: { min: 0, max: 100 },
   grip_strength: { min: 0, max: 80 },

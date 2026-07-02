@@ -18,6 +18,7 @@ import { revokeToken } from "../../api/sheetsClient";
 import { cn } from "../../lib/utils";
 import { LastUpdatedBar } from "../dashboard/LastUpdatedBar";
 import { PollingIndicator } from "../dashboard/PollingIndicator";
+import { AuthExpiredBanner } from "./AuthExpiredBanner";
 
 const sidebarItems = [
   { to: "/dashboard", label: "대시보드 홈", Icon: LayoutDashboard, exact: true },
@@ -129,6 +130,9 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
           </div>
         </div>
       </header>
+
+      {/* 세션 만료 재인증 배너 */}
+      <AuthExpiredBanner />
 
       <div className="flex flex-1">
         {/* 데스크톱 사이드바 */}

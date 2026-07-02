@@ -1,5 +1,6 @@
 import { sheetsRequest, withRetry, nowKST } from "./sheetsClient";
 import { SHEET_NAMES } from "../constants/paps";
+import { fetchKeyColumn, rowMismatchError } from "./rowGuard";
 
 // 행 배열 → 학생 객체 변환 (birth_date 없음, 9컬럼)
 const rowToStudent = (row) => ({
@@ -43,6 +44,10 @@ export const addStudent = async (sheetId, student) => {
 
 // 학생 정보 수정 (rowIndex: 0-based, 실제 시트 행 = rowIndex + 2)
 export const updateStudent = async (sheetId, rowIndex, student) => {
+  // 쓰기 직전 key 컬럼 재조회 — rowIndex가 최신 시트에서도 같은 학생을 가리키는지 검증 (동시성 보호)
+  const keys = await fetchKeyColumn(sheetId, SHEET_NAMES.STUDENTS);
+  if (keys[rowIndex] !== student.student_id) throw rowMismatchError();
+
   const range = `${SHEET_NAMES.STUDENTS}!A${rowIndex + 2}:I${rowIndex + 2}`;
   await withRetry(() =>
     sheetsRequest({

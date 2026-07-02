@@ -19,7 +19,7 @@ import { toast } from "../../store/toastStore";
 import { getStudents } from "../../api/students";
 import { getMeasurements, batchUpdateMeasurementGrades } from "../../api/measurements";
 import { calcGrade, calcTotalGrade } from "../../utils/gradeCalc";
-import { calcBMI, calcBMIGrade } from "../../utils/bmiCalc";
+import { calcBMIGrade } from "../../utils/bmiCalc";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -56,6 +56,7 @@ export default function Settings() {
         setTestState("ok");
         setTestMsg("연동 성공 — 스키마 버전 일치");
         setSheetId(id);
+        queryClient.invalidateQueries({ queryKey: ["grades_standard"] });
         toast.success("Sheet 연동이 업데이트됐습니다.");
       } else {
         setTestState("error");
@@ -110,8 +111,9 @@ export default function Settings() {
         const student = studentMap.get(m.student_id);
         if (!student) return;
 
-        const bmi = calcBMI(student.height, student.weight);
-        const bmi_grade = calcBMIGrade(bmi);
+        // 측정 당시 BMI 이력 보존 — 현재 체격으로 재계산해 덮어쓰지 않는다
+        const bmi = m.bmi;
+        const bmi_grade = bmi != null ? calcBMIGrade(bmi) : null;
 
         const cardio_grade = calcGrade(m.cardio_value, m.cardio_type, student.grade, student.gender, gradesData);
         const muscle_grade = calcGrade(m.muscle_value, m.muscle_type, student.grade, student.gender, gradesData);

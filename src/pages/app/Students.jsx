@@ -4,7 +4,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { v4 as uuidv4 } from "uuid";
 import { useStudents, useAddStudent, useBulkAddStudents, useDeactivateStudent, useDeactivateClassStudents } from "../../hooks/useSheets";
-import { studentSchema } from "../../utils/validators";
+import { makeStudentSchema } from "../../utils/validators";
+import { GRADE_RANGE_BY_LEVEL } from "../../utils/gradesStandardSeed";
+import { useSettingsStore } from "../../store/settingsStore";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -19,9 +21,9 @@ import {
 } from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
 
-function StudentForm({ onSubmit, isLoading }) {
+function StudentForm({ onSubmit, isLoading, schema, gradeOptions }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
-    resolver: zodResolver(studentSchema),
+    resolver: zodResolver(schema),
     defaultValues: { gender: "M", grade: 1, class: 1 },
   });
 
@@ -53,7 +55,7 @@ function StudentForm({ onSubmit, isLoading }) {
           <Select defaultValue="1" onValueChange={(v) => setValue("grade", Number(v))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[1, 2, 3].map((g) => <SelectItem key={g} value={String(g)}>{g}학년</SelectItem>)}
+              {gradeOptions.map((g) => <SelectItem key={g} value={String(g)}>{g}학년</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -89,14 +91,20 @@ export default function Students() {
   const deactivate = useDeactivateStudent();
   const deactivateClass = useDeactivateClassStudents();
   const fileRef = useRef();
+  const schoolLevel = useSettingsStore((s) => s.schoolLevel);
 
   const [search, setSearch] = useState("");
   const [gradeFilter, setGradeFilter] = useState("all");
   const [classFilter, setClassFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [csvPreview, setCsvPreview] = useState(null);
+  const [csvErrors, setCsvErrors] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null); // {student, rowIndex}
   const [classDeleteConfirm, setClassDeleteConfirm] = useState(false);
+
+  // 학교급 기준 학생 스키마·학년 옵션 (초등 1~6, 중·고 1~3)
+  const studentSchema = useMemo(() => makeStudentSchema(schoolLevel), [schoolLevel]);
+  const gradeOptions = GRADE_RANGE_BY_LEVEL[schoolLevel] || GRADE_RANGE_BY_LEVEL["중학교"];
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -129,24 +137,45 @@ export default function Students() {
   };
 
   // CSV 파싱: student_id,name,gender,grade,class,height,weight
+  // 행별 Zod 검증 — 실패 행은 제외하고 사유를 목록으로 안내
   const handleCsvFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       const lines = ev.target.result.split("\n").filter((l) => l.trim());
-      const parsed = lines.slice(1).map((line) => {
+      const valid = [];
+      const errors = [];
+      lines.slice(1).forEach((line, i) => {
         const [student_id, name, gender, grade, cls, height, weight] = line.split(",").map((v) => v.trim());
-        return {
-          student_id, name,
+        const result = studentSchema.safeParse({
+          student_id: student_id ?? "",
+          name: name ?? "",
           gender: gender?.toUpperCase() === "F" ? "F" : "M",
-          grade: Number(grade), class: Number(cls),
-          height: Number(height), weight: Number(weight),
-        };
-      }).filter((s) => s.student_id && s.name);
-      setCsvPreview(parsed);
+          grade: grade ?? "",
+          class: cls ?? "",
+          // 빈 값은 undefined로 검증 (0 저장 금지)
+          height: height ?? "",
+          weight: weight ?? "",
+        });
+        if (result.success) {
+          valid.push(result.data);
+        } else {
+          const reasons = result.error.issues.map((iss) => iss.message).join(", ");
+          errors.push(`${i + 2}행: ${reasons}`);
+        }
+      });
+      setCsvPreview(valid.length > 0 ? valid : null);
+      setCsvErrors(errors);
+      if (errors.length > 0) {
+        toast.error(`CSV ${errors.length}행 검증 실패 — 해당 행은 제외됩니다.`);
+      }
+      if (valid.length === 0 && errors.length === 0) {
+        toast.error("CSV에서 등록할 학생을 찾지 못했습니다.");
+      }
     };
     reader.readAsText(file);
+    e.target.value = "";
   };
 
   const handleCsvTemplateDownload = () => {
@@ -177,9 +206,20 @@ export default function Students() {
     }
   };
 
-  // 학급 전체 비활성화 (현재 필터 기준)
+  // 학급 전체 비활성화 대상 — 검색어와 무관하게 선택된 학년·반 전체 기준
+  const classDeactivateTargets = useMemo(() => {
+    if (gradeFilter === "all" || classFilter === "all") return [];
+    return students.filter(
+      (s) =>
+        s.grade === Number(gradeFilter) &&
+        s.class === Number(classFilter) &&
+        s.is_active !== false
+    );
+  }, [students, gradeFilter, classFilter]);
+
+  // 학급 전체 비활성화
   const handleDeactivateClass = async () => {
-    const activeInClass = filtered.filter((s) => s.is_active !== false);
+    const activeInClass = classDeactivateTargets;
     if (activeInClass.length === 0) return;
     const items = activeInClass.map((s) => ({
       rowIndex: students.findIndex((st) => st.student_id === s.student_id),
@@ -201,6 +241,7 @@ export default function Students() {
       await bulkAdd.mutateAsync(csvPreview);
       toast.success(`${csvPreview.length}명이 등록됐습니다.`);
       setCsvPreview(null);
+      setCsvErrors([]);
     } catch (err) {
       console.error("[bulkAddStudents]", err);
       toast.error(`일괄 등록 실패: ${err?.message || "알 수 없는 오류"}`);
@@ -231,7 +272,7 @@ export default function Students() {
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-blue-800">{csvPreview.length}명 파싱됨 — 등록하시겠습니까?</p>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setCsvPreview(null)}>취소</Button>
+              <Button size="sm" variant="outline" onClick={() => { setCsvPreview(null); setCsvErrors([]); }}>취소</Button>
               <Button size="sm" onClick={handleCsvUpload} disabled={bulkAdd.isPending}>
                 {bulkAdd.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "일괄 등록"}
               </Button>
@@ -242,6 +283,23 @@ export default function Students() {
               <p key={i}>{s.student_id} / {s.name} / {s.grade}학년 {s.class}반</p>
             ))}
             {csvPreview.length > 5 && <p>... 외 {csvPreview.length - 5}명</p>}
+          </div>
+        </div>
+      )}
+
+      {/* CSV 검증 실패 행 안내 */}
+      {csvErrors.length > 0 && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-red-800">검증 실패 {csvErrors.length}행 — 아래 행은 등록에서 제외됩니다</p>
+            {!csvPreview && (
+              <Button size="sm" variant="outline" onClick={() => setCsvErrors([])}>닫기</Button>
+            )}
+          </div>
+          <div className="text-xs text-red-600 space-y-0.5 max-h-24 overflow-auto">
+            {csvErrors.map((msg, i) => (
+              <p key={i}>{msg}</p>
+            ))}
           </div>
         </div>
       )}
@@ -308,7 +366,7 @@ export default function Students() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-gray-400">
+                  <TableCell colSpan={9} className="text-center py-10 text-gray-400">
                     {students.length === 0 ? "등록된 학생이 없습니다" : "검색 결과가 없습니다"}
                   </TableCell>
                 </TableRow>
@@ -360,7 +418,12 @@ export default function Students() {
           <DialogHeader>
             <DialogTitle>신규 학생 등록</DialogTitle>
           </DialogHeader>
-          <StudentForm onSubmit={handleAddStudent} isLoading={addStudent.isPending} />
+          <StudentForm
+            onSubmit={handleAddStudent}
+            isLoading={addStudent.isPending}
+            schema={studentSchema}
+            gradeOptions={gradeOptions}
+          />
         </DialogContent>
       </Dialog>
 
@@ -395,7 +458,7 @@ export default function Students() {
             <DialogTitle>학급 전체 비활성화</DialogTitle>
             <DialogDescription>
               <strong>{gradeFilter}학년 {classFilter}반</strong>의 활성 학생{" "}
-              <strong>{filtered.filter((s) => s.is_active !== false).length}명</strong>을 모두 비활성화하시겠습니까?
+              <strong>{classDeactivateTargets.length}명</strong>을 모두 비활성화하시겠습니까?
               <br />
               측정 이력은 보존됩니다.
             </DialogDescription>

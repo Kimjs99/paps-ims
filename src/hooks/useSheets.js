@@ -81,13 +81,16 @@ export const useBulkAddStudents = () => {
 };
 
 // 전체 측정 데이터
-export const useMeasurements = () => {
+// poll: false — 측정 입력 페이지(StudentMeasure·ClassMeasure)에서 사용.
+// 30초 폴링이 입력 중인 폼을 저장값으로 되돌리는 문제 방지 (기본값 true — 대시보드 등 기존 호출자 무변경)
+export const useMeasurements = ({ poll = true } = {}) => {
   const sheetId = useSheetId();
   return useQuery({
     queryKey: ["measurements", sheetId],
     queryFn: () => getMeasurements(sheetId),
     enabled: !!sheetId,
-    refetchInterval: 30 * 1000,
+    refetchInterval: poll ? 30 * 1000 : false,
+    refetchOnWindowFocus: poll,
   });
 };
 
