@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.12.0] - 2026-03-22
+
+### ✨ Features
+- **주간/야간/자동 화면 모드 토글 추가** — 앱 헤더 및 대시보드 헤더에 ☀/🖥/🌙 3버튼 토글 추가, `useTheme` 훅으로 `<html>` 에 `.dark` 클래스 적용·시스템 설정 자동 감지, 사이드바·탭바·헤더·푸터 다크 모드 스타일 일괄 적용 (2a51fdf)
+
 ## [v0.11.0] - 2026-03-22
 
 ### ✨ Features

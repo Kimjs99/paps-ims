@@ -23,7 +23,8 @@ bun run test src/test/students.test.js
 
 **서버 없는 구조**: Google Sheets API v4가 유일한 DB. Firebase/Supabase 없음.
 **인증**: 커스텀 OAuth 팝업 flow (`openOAuthPopup` → `oauth-callback.html` → postMessage) — 토큰은 `sessionStorage`에만 저장, `localStorage`에 저장 금지. GIS 라이브러리 미사용.
-**상태**: Zustand persist 스토어 2개가 `localStorage`에 저장됨 — `paps-auth`(로그인 상태), `paps-settings`(Sheet ID·학교 정보).
+**상태**: Zustand persist 스토어 2개가 `localStorage`에 저장됨 — `paps-auth`(로그인 상태), `paps-settings`(Sheet ID·학교 정보·테마 모드).
+**다크 모드**: `useTheme()` 훅(`src/hooks/useTheme.js`)이 `settingsStore.themeMode`를 구독해 `<html>`에 `.dark` 클래스를 적용. Tailwind `darkMode: ["class"]` 설정과 `index.css`의 전역 `.dark` 오버라이드 규칙으로 동작.
 
 ## 핵심 데이터 흐름
 
@@ -163,7 +164,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 ## 컴포넌트 서브디렉토리 (`src/components/`)
 
 - `ui/` — shadcn/ui 래퍼 컴포넌트 (수정 금지)
-- `layout/` — AppLayout, DashboardLayout, ErrorBoundary, SchemaMigrationBanner
+- `layout/` — AppLayout, DashboardLayout, ErrorBoundary, SchemaMigrationBanner. AppLayout·DashboardLayout 모두 헤더에 ☀/🖥/🌙 테마 토글 버튼 포함
 - `dashboard/` — KpiCard, DashboardFilters, GradeQuickFilter, LastUpdatedBar, PollingIndicator
 - `charts/` — 대시보드용 Recharts 차트 컴포넌트
 - `measurement/` — MeasurementStatusBadge 등 측정 입력 관련
@@ -186,4 +187,5 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - **학급 하드 삭제는 되돌릴 수 없음**: `api/deleteClass.js`의 `deleteClassHard()`는 `batchUpdate deleteDimension`으로 행을 영구 삭제 — 소프트 삭제(`is_active=false`)와 혼동 금지
 - **키/몸무게 측정 시 student 레코드 업데이트**: `ClassMeasure`·`StudentMeasure` 저장 시 폼의 height/weight가 기존 student 값과 다르면 `useUpdateStudent`로 students 시트도 함께 업데이트. 측정 CSV 템플릿 컬럼 순서: `student_id, 이름, 성별, 학년, 반, 키(cm), 몸무게(kg), 심폐, 근력, 유연성, 순발력`
 - **optional 숫자 필드 Zod 패턴**: 빈 문자열·null → undefined 변환이 필요한 숫자 필드는 `z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number()...optional())` 패턴 사용 — `z.coerce.number()`는 빈 문자열을 `NaN`으로 변환해 검증 실패
+- **다크 모드 신규 컴포넌트 작성 시**: Tailwind 하드코딩 클래스(`bg-white`, `bg-gray-50` 등)는 `index.css`의 전역 `.dark` 오버라이드로 대응됨. 새 컴포넌트에 다크 스타일 추가 시 `dark:` 변형 클래스 직접 작성 또는 `index.css`에 오버라이드 규칙 추가 선택
 
