@@ -1,34 +1,20 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, Save, Loader2, AlertCircle, Download, Upload } from "lucide-react";
-import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useStudents, useMeasurements, useSaveMeasurementsBatch, useUpdateStudent } from "../../hooks/useSheets";
 import { useGradesStandard } from "../../hooks/useGradeCalc";
-import { calcGrade, calcTotalGrade } from "../../utils/gradeCalc";
-import { calcBMI, calcBMIGrade } from "../../utils/bmiCalc";
-import { VALID_RANGES, CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES } from "../../constants/paps";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { GradeBadge } from "../../components/ui/GradeBadge";
-import { MeasurementStatusBadge } from "../../components/measurement/MeasurementStatusBadge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "../../components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
+import { ClassMeasureTypeSelects } from "../../components/measurement/ClassMeasureTypeSelects";
+import { ClassMeasureTable } from "../../components/measurement/ClassMeasureTable";
 import { toast } from "../../store/toastStore";
 import { buildBaseline, selectDirtyStudents } from "./classMeasureDirty";
-
-// 유효 범위 체크
-const isOutOfRange = (field, value) => {
-  const range = VALID_RANGES[field];
-  if (!range || value === "" || value === null || value === undefined) return false;
-  const num = Number(value);
-  return num < range.min || num > range.max;
-};
+import { mergePrefillFormValues, restoreTypes, buildMeasurementRows } from "./classMeasureForm";
+import { buildTemplateCsv, applyCsvToFormValues } from "./classMeasureCsv";
+import { parseCsv, downloadCsv } from "../../utils/csv";
 
 export default function ClassMeasure() {
   const { classId } = useParams();
@@ -94,37 +80,9 @@ export default function ClassMeasure() {
     initializedRef.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setBaseline(buildBaseline(classStudents, existingMeasurements));
-    setFormValues((prev) => {
-      const next = { ...prev };
-      classStudents.forEach((s) => {
-        if (!next[s.student_id]) {
-          const m = existingMeasurements[s.student_id];
-          next[s.student_id] = {
-            height: s.height ?? "",
-            weight: s.weight ?? "",
-            cardio_value: m?.cardio_value ?? "",
-            muscle_value: m?.muscle_value ?? "",
-            flexibility_value: m?.flexibility_value ?? "",
-            agility_value: m?.agility_value ?? "",
-          };
-        } else if (next[s.student_id].height === undefined) {
-          // draft는 있지만 키/몸무게가 없으면 학생 데이터로 채움
-          next[s.student_id] = {
-            height: s.height ?? "",
-            weight: s.weight ?? "",
-            ...next[s.student_id],
-          };
-        }
-      });
-      return next;
-    });
+    setFormValues((prev) => mergePrefillFormValues(prev, classStudents, existingMeasurements));
     // 저장된 종목 타입 복원 + 종목 스냅샷 (미저장 시 기본값이 기준선)
-    const first = Object.values(existingMeasurements)[0];
-    const restoredTypes = {
-      cardio: first?.cardio_type || "shuttle_run",
-      muscle: first?.muscle_type || "sit_up",
-      agility: first?.agility_type || "sprint_50m",
-    };
+    const restoredTypes = restoreTypes(existingMeasurements);
     setCardioType(restoredTypes.cardio);
     setMuscleType(restoredTypes.muscle);
     setAgilityType(restoredTypes.agility);
@@ -164,8 +122,6 @@ export default function ClassMeasure() {
     localStorage.setItem(`paps_draft_${classId}_${schoolYear}`, JSON.stringify(next));
   };
 
-  const getVal = (studentId, field) => formValues[studentId]?.[field] ?? "";
-
   // 저장
   const handleSave = async () => {
     if (!gradesData) {
@@ -179,33 +135,13 @@ export default function ClassMeasure() {
       return;
     }
 
-    const mList = toBeSaved.map((student) => {
-      const v = formValues[student.student_id] || {};
-      const cardio_value = v.cardio_value !== "" ? Number(v.cardio_value) : null;
-      const muscle_value = v.muscle_value !== "" ? Number(v.muscle_value) : null;
-      const flexibility_value = v.flexibility_value !== "" ? Number(v.flexibility_value) : null;
-      const agility_value = v.agility_value !== "" ? Number(v.agility_value) : null;
-      const height = v.height !== "" ? Number(v.height) : student.height;
-      const weight = v.weight !== "" ? Number(v.weight) : student.weight;
-      const bmi = calcBMI(height, weight);
-      const bmi_grade = calcBMIGrade(bmi);
-      const cardio_grade = calcGrade(cardio_value, cardioType, student.grade, student.gender, gradesData);
-      const muscle_grade = calcGrade(muscle_value, muscleType, student.grade, student.gender, gradesData);
-      const flexibility_grade = calcGrade(flexibility_value, "sit_and_reach", student.grade, student.gender, gradesData);
-      const agility_grade = calcGrade(agility_value, agilityType, student.grade, student.gender, gradesData);
-      const total_grade = calcTotalGrade([cardio_grade, muscle_grade, flexibility_grade, agility_grade, bmi_grade]);
-      return {
-        measurement_id: uuidv4(),
-        student_id: student.student_id,
-        year: schoolYear,
-        cardio_type: cardioType, cardio_value, cardio_grade,
-        muscle_type: muscleType, muscle_value, muscle_grade,
-        flexibility_value, flexibility_grade,
-        agility_type: agilityType, agility_value, agility_grade,
-        bmi, bmi_grade, total_grade,
-        teacher_email: user?.email || "",
-      };
-    });
+    const mList = buildMeasurementRows(
+      toBeSaved,
+      formValues,
+      { cardioType, muscleType, agilityType },
+      { schoolYear, teacherEmail: user?.email || "" },
+      gradesData
+    );
 
     try {
       // 키/몸무게가 변경된 학생 정보 업데이트
@@ -250,24 +186,12 @@ export default function ClassMeasure() {
     }
   };
 
-  // 측정 CSV 템플릿 다운로드 (학급 학생 사전 입력)
+  // 측정 CSV 템플릿 다운로드 (학급 학생 사전 입력) — BOM 포함: Excel 한글 깨짐 방지
   const handleTemplateDownload = () => {
-    const cardioLabel = CARDIO_TYPES.find((t) => t.value === cardioType)?.label || cardioType;
-    const muscleLabel = MUSCLE_TYPES.find((t) => t.value === muscleType)?.label || muscleType;
-    const agilityLabel = AGILITY_TYPES.find((t) => t.value === agilityType)?.label || agilityType;
-    const header = `student_id,이름,성별,학년,반,키(cm),몸무게(kg),심폐지구력(${cardioLabel}),근력근지구력(${muscleLabel}),유연성(앉아윗몸앞으로굽히기cm),순발력(${agilityLabel})`;
-    const rows = classStudents.map((s) =>
-      [s.student_id, s.name, s.gender === "M" ? "남" : "여", s.grade, s.class,
-        s.height ?? "", s.weight ?? "", "", "", "", ""].join(",")
+    downloadCsv(
+      `측정기록_${grade}학년${cls}반_${schoolYear}.csv`,
+      buildTemplateCsv(classStudents, { cardioType, muscleType, agilityType })
     );
-    const bom = "\uFEFF"; // UTF-8 BOM for Excel 한글 깨짐 방지
-    const blob = new Blob([bom + [header, ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `측정기록_${grade}학년${cls}반_${schoolYear}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   // 측정 CSV 업로드 → formValues에 반영
@@ -276,21 +200,7 @@ export default function ClassMeasure() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const lines = ev.target.result.split("\n").filter((l) => l.trim());
-      const next = { ...formValues };
-      lines.slice(1).forEach((line) => {
-        const cols = line.split(",").map((v) => v.trim());
-        const [studentId, , , , , height, weight, cardio, muscle, flex, agility] = cols;
-        if (!studentId) return;
-        next[studentId] = {
-          height: height !== "" ? height : (formValues[studentId]?.height ?? ""),
-          weight: weight !== "" ? weight : (formValues[studentId]?.weight ?? ""),
-          cardio_value: cardio !== "" ? cardio : (formValues[studentId]?.cardio_value ?? ""),
-          muscle_value: muscle !== "" ? muscle : (formValues[studentId]?.muscle_value ?? ""),
-          flexibility_value: flex !== "" ? flex : (formValues[studentId]?.flexibility_value ?? ""),
-          agility_value: agility !== "" ? agility : (formValues[studentId]?.agility_value ?? ""),
-        };
-      });
+      const next = applyCsvToFormValues(parseCsv(ev.target.result), formValues);
       setFormValues(next);
       localStorage.setItem(`paps_draft_${classId}_${schoolYear}`, JSON.stringify(next));
       toast.success("CSV 데이터가 입력란에 반영됐습니다. 확인 후 저장하세요.");
@@ -322,41 +232,11 @@ export default function ClassMeasure() {
       </div>
 
       {/* 종목 선택 */}
-      <div className="bg-white border rounded-xl p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-500">심폐지구력 종목</label>
-          <Select value={cardioType} onValueChange={setCardioType}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CARDIO_TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>{t.label} ({t.unit})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-500">근력·근지구력 종목</label>
-          <Select value={muscleType} onValueChange={setMuscleType}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {MUSCLE_TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>{t.label} ({t.unit})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-500">순발력 종목</label>
-          <Select value={agilityType} onValueChange={setAgilityType}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {AGILITY_TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>{t.label} ({t.unit})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <ClassMeasureTypeSelects
+        cardioType={cardioType} setCardioType={setCardioType}
+        muscleType={muscleType} setMuscleType={setMuscleType}
+        agilityType={agilityType} setAgilityType={setAgilityType}
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -364,116 +244,16 @@ export default function ClassMeasure() {
           <span className="text-gray-500">로딩 중...</span>
         </div>
       ) : (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="w-20">상태</TableHead>
-                <TableHead className="w-24">이름</TableHead>
-                <TableHead className="w-12 text-center">성별</TableHead>
-                <TableHead>
-                  키<br />
-                  <span className="text-xs font-normal text-gray-400">cm</span>
-                </TableHead>
-                <TableHead>
-                  몸무게<br />
-                  <span className="text-xs font-normal text-gray-400">kg</span>
-                </TableHead>
-                <TableHead>
-                  심폐<br />
-                  <span className="text-xs font-normal text-gray-400">
-                    {CARDIO_TYPES.find((t) => t.value === cardioType)?.unit}
-                  </span>
-                </TableHead>
-                <TableHead>
-                  근력<br />
-                  <span className="text-xs font-normal text-gray-400">
-                    {MUSCLE_TYPES.find((t) => t.value === muscleType)?.unit}
-                  </span>
-                </TableHead>
-                <TableHead>
-                  유연성<br />
-                  <span className="text-xs font-normal text-gray-400">cm</span>
-                </TableHead>
-                <TableHead>
-                  순발력<br />
-                  <span className="text-xs font-normal text-gray-400">
-                    {AGILITY_TYPES.find((t) => t.value === agilityType)?.unit}
-                  </span>
-                </TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {classStudents.map((student) => {
-                const measured = measuredIds.has(student.student_id);
-                const hasInput = Object.values(formValues[student.student_id] || {}).some(
-                  (v) => v !== "" && v !== null
-                );
-                const status = measured ? "complete" : hasInput ? "complete" : "incomplete";
-                const fields = [
-                  { key: "cardio_value", range: cardioType },
-                  { key: "muscle_value", range: muscleType },
-                  { key: "flexibility_value", range: "sit_and_reach" },
-                  { key: "agility_value", range: agilityType },
-                ];
-                return (
-                  <TableRow key={student.student_id}>
-                    <TableCell>
-                      <MeasurementStatusBadge status={status} />
-                    </TableCell>
-                    <TableCell className="font-medium">{student.name}</TableCell>
-                    <TableCell className="text-center text-gray-500">
-                      {student.gender === "M" ? "남" : "여"}
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        className="w-20 h-8 text-sm"
-                        value={getVal(student.student_id, "height")}
-                        onChange={(e) => handleChange(student.student_id, "height", e.target.value)}
-                        placeholder="-"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        className="w-20 h-8 text-sm"
-                        value={getVal(student.student_id, "weight")}
-                        onChange={(e) => handleChange(student.student_id, "weight", e.target.value)}
-                        placeholder="-"
-                      />
-                    </TableCell>
-                    {fields.map(({ key, range }) => (
-                      <TableCell key={key}>
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          className={`w-20 h-8 text-sm ${isOutOfRange(range, getVal(student.student_id, key)) ? "border-red-400 bg-red-50" : ""}`}
-                          value={getVal(student.student_id, key)}
-                          onChange={(e) => handleChange(student.student_id, key, e.target.value)}
-                          placeholder="-"
-                        />
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs px-2"
-                        onClick={() => navigate(`/measure/${classId}/${student.student_id}`)}
-                      >
-                        상세
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+        <ClassMeasureTable
+          classStudents={classStudents}
+          measuredIds={measuredIds}
+          formValues={formValues}
+          cardioType={cardioType}
+          muscleType={muscleType}
+          agilityType={agilityType}
+          onChange={handleChange}
+          onDetail={(studentId) => navigate(`/measure/${classId}/${studentId}`)}
+        />
       )}
 
       {/* 저장 버튼 */}

@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.13.0] - 2026-07-03
+
+### ♻️ Refactoring (동작 변경 0 — 적대적 검증 확인)
+
+**중복 통합**
+- **등급 계산 단일화** — ClassMeasure·StudentMeasure(미리보기+저장)·Settings(재계산) 4중 복제를 `buildGrades(formValues, student, gradesData, options)` 하나로 통합. `options.bmi`로 재계산 시 측정 당시 BMI 이력 보존(v0.12.1 수정 유지)
+- **`FITNESS_AREAS` 상수화** — 5개 체력요소(키/라벨/필드) 재선언 9곳 → `constants/paps.js` 단일 정의. 화면별 표기 차이는 label/labelAlt/labelFull로 보존
+- **평균 유틸** — `utils/stats.js` 신규(`avgOf`/`avgFixed1`/`avgRounded`), 5곳 배선 — 사이트별 반올림·출력 타입 그대로
+- **CSV 유틸** — `utils/csv.js` 신규(따옴표 인식 파서·BOM 옵션 다운로드), ClassMeasure·Students 배선
+- **`useLogout` 훅 + `ThemeToggle` 컴포넌트 추출** — AppLayout·DashboardLayout·Settings 3중 복제 제거
+
+**대형 페이지 분해** (동작·DOM·className 불변)
+- **ClassMeasure 498→281줄** — `classMeasureCsv.js`·`classMeasureForm.js`(순수 함수) + `ClassMeasureTypeSelects`·`ClassMeasureTable`(컴포넌트). 프리필 1회 가드·dirty 저장·beforeunload는 페이지에 원문 유지
+- **StudentDetail 486→188줄** — `studentDetailData.js` + `StudentSearch`·`StudentHistoryTable`·`StudentAvgGradeCards`
+- **Report 443→217줄** — `reportData.js`(활성 필터 선행·평균 계약 명문화) + `ReportFilters`·`ClassReportTab`·`PersonalCardsTab` + `useReportExports` 훅
+
+### ✅ Tests
+- Vitest 211 → **320 케이스** (+109): 시드 단조성 26(3개 학교급 전수 — 이상 0건), stats 9, csv 11(라운드트립), classMeasureCsv/Form 21, studentDetailData 22, reportData 17(평균≠최우수 병합 명시 검증), gradeCalc +3
+
 ## [v0.12.2] - 2026-07-03
 
 ### 🔧 Chores (위생 배치)

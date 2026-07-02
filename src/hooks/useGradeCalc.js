@@ -2,8 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSettingsStore } from "../store/settingsStore";
 import { sheetsRequest } from "../api/sheetsClient";
 import { SHEET_NAMES } from "../constants/paps";
-import { calcGrade, calcTotalGrade } from "../utils/gradeCalc";
-import { calcBMI, calcBMIGrade } from "../utils/bmiCalc";
+import { buildGrades } from "../utils/gradeCalc";
 
 // grades_standard 시트 조회 (staleTime 5분)
 export const useGradesStandard = () => {
@@ -31,33 +30,8 @@ export const useGradesStandard = () => {
   });
 };
 
-// 입력값 변경 시 실시간 등급 계산
+// 입력값 변경 시 실시간 등급 계산 — buildGrades 위임 (StudentMeasure 미리보기·저장 경로)
 export const useCalculateGrades = (formValues, student) => {
   const { data: gradesData } = useGradesStandard();
-  if (!gradesData || !student) return null;
-
-  const bmi = calcBMI(student.height, student.weight);
-  const bmi_grade = calcBMIGrade(bmi);
-
-  const cardio_grade = calcGrade(
-    formValues.cardio_value, formValues.cardio_type,
-    student.grade, student.gender, gradesData
-  );
-  const muscle_grade = calcGrade(
-    formValues.muscle_value, formValues.muscle_type,
-    student.grade, student.gender, gradesData
-  );
-  const flexibility_grade = calcGrade(
-    formValues.flexibility_value, "sit_and_reach",
-    student.grade, student.gender, gradesData
-  );
-  const agility_grade = calcGrade(
-    formValues.agility_value, formValues.agility_type,
-    student.grade, student.gender, gradesData
-  );
-  const total_grade = calcTotalGrade([
-    cardio_grade, muscle_grade, flexibility_grade, agility_grade, bmi_grade,
-  ]);
-
-  return { bmi, bmi_grade, cardio_grade, muscle_grade, flexibility_grade, agility_grade, total_grade };
+  return buildGrades(formValues, student, gradesData);
 };

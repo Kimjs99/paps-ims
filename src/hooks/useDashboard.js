@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { useMeasurements, useStudents } from "./useSheets";
 import { useSettingsStore } from "../store/settingsStore";
 import { GRADE_RANGE_BY_LEVEL } from "../utils/gradesStandardSeed";
+import { FITNESS_AREAS, FITNESS_GRADE_FIELDS } from "../constants/paps";
+import { avgOf, avgFixed1, avgRounded } from "../utils/stats";
 
 /**
  * 동일 학생의 중복 측정 데이터를 병합한다.
@@ -20,15 +22,7 @@ export const deduplicateMeasurements = (measurements) => {
     }
     const best = groups.get(key);
 
-    const areas = [
-      { grade: "cardio_grade",      value: "cardio_value",      type: "cardio_type" },
-      { grade: "muscle_grade",      value: "muscle_value",      type: "muscle_type" },
-      { grade: "flexibility_grade", value: "flexibility_value"                       },
-      { grade: "agility_grade",     value: "agility_value",     type: "agility_type" },
-      { grade: "bmi_grade",         value: "bmi"                                     },
-    ];
-
-    areas.forEach(({ grade, value, type }) => {
+    FITNESS_AREAS.forEach(({ gradeField: grade, valueField: value, typeField: type }) => {
       const ng = m[grade];
       const eg = best[grade];
       const better =
@@ -41,14 +35,12 @@ export const deduplicateMeasurements = (measurements) => {
       }
     });
 
-    // total_grade 재계산
-    const vals = ["cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade"]
+    // total_grade 재계산 (채택된 등급들의 평균 — Math.round)
+    const vals = FITNESS_GRADE_FIELDS
       .map((k) => best[k])
-      .filter((g) => g != null && !isNaN(Number(g)));
-    best.total_grade =
-      vals.length > 0
-        ? Math.round(vals.reduce((a, b) => a + Number(b), 0) / vals.length)
-        : null;
+      .filter((g) => g != null && !isNaN(Number(g)))
+      .map(Number);
+    best.total_grade = avgRounded(vals);
 
     if ((m.measured_at ?? "") > (best.measured_at ?? "")) best.measured_at = m.measured_at;
   });
@@ -134,12 +126,7 @@ export const useDashboardData = (filters = {}) => {
       totalStudents > 0 ? Math.round((measuredCount / totalStudents) * 100) : 0;
     const gradesWithValue = filtered.filter((m) => m.total_grade);
     const avgTotalGrade =
-      gradesWithValue.length > 0
-        ? (
-            gradesWithValue.reduce((a, m) => a + Number(m.total_grade), 0) /
-            gradesWithValue.length
-          ).toFixed(1)
-        : null;
+      avgOf(gradesWithValue.map((m) => Number(m.total_grade)))?.toFixed(1) ?? null;
     return { totalStudents, measuredCount, completionRate, avgTotalGrade };
   }, [filtered, filteredActiveStudents]);
 
@@ -181,23 +168,14 @@ export const useDashboardData = (filters = {}) => {
     });
   }, [filtered, activeStudents, schoolLevel]);
 
-  const areaAvgs = useMemo(() => {
-    const areas = [
-      { area: "심폐지구력", key: "cardio_grade" },
-      { area: "근력·근지구력", key: "muscle_grade" },
-      { area: "유연성", key: "flexibility_grade" },
-      { area: "순발력", key: "agility_grade" },
-      { area: "BMI", key: "bmi_grade" },
-    ];
-    return areas.map(({ area, key }) => {
-      const vals = filtered.filter((m) => m[key]).map((m) => Number(m[key]));
-      const value =
-        vals.length > 0
-          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
-          : null;
-      return { area, value };
-    });
-  }, [filtered]);
+  const areaAvgs = useMemo(
+    () =>
+      FITNESS_AREAS.map(({ label, gradeField }) => ({
+        area: label,
+        value: avgFixed1(filtered.filter((m) => m[gradeField]).map((m) => Number(m[gradeField]))),
+      })),
+    [filtered]
+  );
 
   const availableYears = useMemo(() => {
     // 활성 학생 측정값 기준
@@ -239,24 +217,17 @@ export const useDashboardData = (filters = {}) => {
 export const useGenderComparison = (measurements, students) => {
   return useMemo(() => {
     const studentMap = new Map(students.map((s) => [s.student_id, s]));
-    const areas = ["cardio", "muscle", "flexibility", "agility", "bmi"];
-    const areaLabels = {
-      cardio: "심폐지구력", muscle: "근력·근지구력",
-      flexibility: "유연성", agility: "순발력", bmi: "비만",
-    };
-    return areas.map((area) => {
+    return FITNESS_AREAS.map(({ label, labelAlt, gradeField }) => {
       const calcAvg = (gender) => {
         const vals = measurements
           .filter((m) => {
             const s = studentMap.get(m.student_id);
-            return s?.gender === gender && m[`${area}_grade`];
+            return s?.gender === gender && m[gradeField];
           })
-          .map((m) => Number(m[`${area}_grade`]));
-        return vals.length
-          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
-          : null;
+          .map((m) => Number(m[gradeField]));
+        return avgFixed1(vals);
       };
-      return { area: areaLabels[area], male: calcAvg("M"), female: calcAvg("F") };
+      return { area: labelAlt ?? label, male: calcAvg("M"), female: calcAvg("F") };
     });
   }, [measurements, students]);
 };
@@ -270,12 +241,7 @@ export const useYearlyTrend = (measurements, targetStudentIds = null) => {
       if (targetStudentIds) {
         yearData = yearData.filter((m) => targetStudentIds.includes(m.student_id));
       }
-      const avg = (field) => {
-        const vals = yearData.map((m) => m[field]).filter(Boolean);
-        return vals.length
-          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
-          : null;
-      };
+      const avg = (field) => avgFixed1(yearData.map((m) => m[field]).filter(Boolean));
       return {
         year,
         cardio: avg("cardio_grade"),

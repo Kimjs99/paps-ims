@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { GRADE_COLORS } from "../../constants/paps";
+import { GRADE_COLORS, FITNESS_AREAS } from "../../constants/paps";
 
 // 영역별 등급 분포 집계
 function calcAreaStats(measurements, areaGradeKey) {
@@ -18,13 +18,12 @@ function calcAreaStats(measurements, areaGradeKey) {
   return { dist, avg, count };
 }
 
-const AREAS = [
-  { label: "심폐지구력", gradeKey: "cardio_grade", valueKey: "cardio_value" },
-  { label: "근력·근지구력", gradeKey: "muscle_grade", valueKey: "muscle_value" },
-  { label: "유연성", gradeKey: "flexibility_grade", valueKey: "flexibility_value" },
-  { label: "순발력", gradeKey: "agility_grade", valueKey: "agility_value" },
-  { label: "비만(BMI)", gradeKey: "bmi_grade", valueKey: "bmi" },
-];
+// bmi는 "비만(BMI)" 표기
+const AREAS = FITNESS_AREAS.map((a) => ({
+  label: a.labelFull ?? a.label,
+  gradeKey: a.gradeField,
+  valueKey: a.valueField,
+}));
 
 function GradeCell({ grade }) {
   if (!grade) return <td className="border px-2 py-1 text-center text-gray-400">-</td>;

@@ -192,4 +192,25 @@ describe('buildGrades', () => {
   it('gradesData가 null이면 null 반환', () => {
     expect(buildGrades(formValues, student, null)).toBeNull();
   });
+
+  it('기본은 student height/weight로 BMI 계산', () => {
+    const result = buildGrades(formValues, student, gradesData);
+    // 65 / 1.7^2 = 22.49... → 22.5
+    expect(result.bmi).toBe(22.5);
+    expect(result.bmi_grade).toBe(1); // 23 미만 = 정상
+  });
+
+  it('options.bmi 지정 시 재계산 없이 해당 BMI 사용 (재계산 이력 보존 경로)', () => {
+    const result = buildGrades(formValues, student, gradesData, { bmi: 17.2 });
+    expect(result.bmi).toBe(17.2);
+    expect(result.bmi_grade).toBe(4); // 저체중
+  });
+
+  it('options.bmi가 null이면 bmi_grade도 null (기준표 시드 전 저장 기록)', () => {
+    const result = buildGrades(formValues, student, gradesData, { bmi: null });
+    expect(result.bmi).toBeNull();
+    expect(result.bmi_grade).toBeNull();
+    // total_grade는 bmi 제외 4개 영역 평균
+    expect(result.total_grade).not.toBeNull();
+  });
 });

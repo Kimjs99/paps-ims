@@ -20,6 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
+import { parseCsv, downloadCsv } from "../../utils/csv";
 
 function StudentForm({ onSubmit, isLoading, schema, gradeOptions }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
@@ -143,11 +144,11 @@ export default function Students() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const lines = ev.target.result.split("\n").filter((l) => l.trim());
+      const rows = parseCsv(ev.target.result);
       const valid = [];
       const errors = [];
-      lines.slice(1).forEach((line, i) => {
-        const [student_id, name, gender, grade, cls, height, weight] = line.split(",").map((v) => v.trim());
+      rows.slice(1).forEach((cols, i) => {
+        const [student_id, name, gender, grade, cls, height, weight] = cols;
         const result = studentSchema.safeParse({
           student_id: student_id ?? "",
           name: name ?? "",
@@ -184,13 +185,8 @@ export default function Students() {
       "20240101,홍길동,M,1,1,165,58",
       "20240102,김영희,F,1,1,158,52",
     ].join("\n");
-    const blob = new Blob([`${header}\n${examples}\n`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "students_template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    // 기존 동작 유지: 학생 템플릿은 BOM 없이 다운로드
+    downloadCsv("students_template.csv", `${header}\n${examples}\n`, { bom: false });
   };
 
   // 개별 학생 비활성화

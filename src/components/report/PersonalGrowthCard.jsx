@@ -7,15 +7,10 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from "recharts";
-import { GRADE_COLORS, GRADE_LABELS } from "../../constants/paps";
+import { GRADE_COLORS, GRADE_LABELS, FITNESS_AREAS, FITNESS_GRADE_FIELDS } from "../../constants/paps";
+import { avgOf, avgRounded } from "../../utils/stats";
 
-const AREA_KEYS = [
-  { area: "심폐지구력", key: "cardio_grade" },
-  { area: "근력·근지구력", key: "muscle_grade" },
-  { area: "유연성", key: "flexibility_grade" },
-  { area: "순발력", key: "agility_grade" },
-  { area: "BMI", key: "bmi_grade" },
-];
+const AREA_KEYS = FITNESS_AREAS.map((a) => ({ area: a.label, key: a.gradeField }));
 
 function GradeBadge({ label, grade }) {
   const color = grade ? GRADE_COLORS[grade] : "#9ca3af";
@@ -30,12 +25,10 @@ function GradeBadge({ label, grade }) {
   );
 }
 
-const GRADE_KEYS = ["cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade", "total_grade"];
+const GRADE_KEYS = [...FITNESS_GRADE_FIELDS, "total_grade"];
 
 function avgGrade(measurements, key) {
-  const vals = measurements.map((m) => Number(m[key])).filter((v) => v >= 1 && v <= 5);
-  if (!vals.length) return null;
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
+  return avgOf(measurements.map((m) => Number(m[key])).filter((v) => v >= 1 && v <= 5));
 }
 
 export function PersonalGrowthCard({ student, measurements, schoolName, schoolYear, id }) {
@@ -76,7 +69,7 @@ export function PersonalGrowthCard({ student, measurements, schoolName, schoolYe
       .sort((a, b) => a[0] - b[0])
       .map(([year, grades]) => ({
         year,
-        grade: grades.length > 0 ? Math.round(grades.reduce((a, b) => a + b, 0) / grades.length) : null,
+        grade: avgRounded(grades),
       }));
   }, [measurements]);
 

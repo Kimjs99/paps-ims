@@ -1,3 +1,5 @@
+import { calcBMI, calcBMIGrade } from "./bmiCalc";
+
 // grades_standard 시트 데이터를 기반으로 등급 계산
 export const calcGrade = (value, item, grade, gender, gradesData) => {
   if (value === null || value === undefined || value === "") return null;
@@ -37,12 +39,19 @@ export const calcTotalGrade = (grades) => {
   return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
 };
 
-import { calcBMI, calcBMIGrade } from "./bmiCalc";
-
-// 측정값 + 학생정보 + gradesData → 완전한 등급 객체 생성
-export const buildGrades = (formValues, student, gradesData) => {
+/**
+ * 측정값 + 학생정보 + gradesData → 완전한 등급 객체 생성
+ *
+ * @param {object} formValues  cardio_type/value, muscle_type/value, flexibility_value, agility_type/value
+ * @param {object} student     grade, gender (+ height/weight — BMI 산출용)
+ * @param {Array}  gradesData  grades_standard 시트 데이터
+ * @param {object} [options]
+ * @param {number|null} [options.bmi] 지정 시 height/weight로 재계산하지 않고 이 BMI를 사용
+ *                                    (설정 → 재계산: 측정 당시 BMI 이력 보존용)
+ */
+export const buildGrades = (formValues, student, gradesData, options = {}) => {
   if (!gradesData || !student) return null;
-  const bmi = calcBMI(student.height, student.weight);
+  const bmi = "bmi" in options ? options.bmi : calcBMI(student.height, student.weight);
   const bmi_grade = calcBMIGrade(bmi);
 
   const cardio_grade = calcGrade(

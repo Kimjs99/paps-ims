@@ -1,97 +1,17 @@
 import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Search } from "lucide-react";
 import { DashboardLayout } from "../../components/layout/DashboardLayout";
-import { GradeBadge } from "../../components/ui/GradeBadge";
 import { AreaRadarChart } from "../../components/charts/AreaRadarChart";
 import { YearlyTrendChart } from "../../components/charts/YearlyTrendChart";
+import { StudentSearch } from "../../components/dashboard/StudentSearch";
 import { useStudents, useMeasurements } from "../../hooks/useSheets";
-import { GRADE_COLORS, CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES, FLEXIBILITY_ITEM } from "../../constants/paps";
-
-const getTypeInfo = (types, typeValue) => {
-  const t = types.find((t) => t.value === typeValue);
-  return t ?? { label: typeValue ?? "—", unit: "" };
-};
-
-// KST 측정일시 표기 (예: "2024-03-12 10:00")
-const formatDatetime = (v) => {
-  if (!v) return "—";
-  const d = new Date(v);
-  if (isNaN(d)) return v.slice(0, 16).replace("T", " ");
-  return d.toLocaleString("sv-SE", { timeZone: "Asia/Seoul" }).slice(0, 16);
-};
-
-const AREA_KEYS = ["total", "cardio", "muscle", "flexibility", "agility", "bmi"];
-const AREA_LABELS = {
-  total: "종합", cardio: "심폐지구력", muscle: "근력·근지구력",
-  flexibility: "유연성", agility: "순발력", bmi: "비만",
-};
-
-const AREA_ITEMS = [
-  { label: "심폐지구력", key: "cardio_grade" },
-  { label: "근력·근지구력", key: "muscle_grade" },
-  { label: "유연성", key: "flexibility_grade" },
-  { label: "순발력", key: "agility_grade" },
-  { label: "비만(BMI)", key: "bmi_grade" },
-];
-
-function StudentSearch({ students }) {
-  const [query, setQuery] = useState("");
-  const results = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.trim().toLowerCase();
-    return students
-      .filter((s) => s.is_active)
-      .filter(
-        (s) =>
-          s.name?.toLowerCase().includes(q) ||
-          String(s.student_id).includes(q)
-      )
-      .slice(0, 20);
-  }, [students, query]);
-
-  return (
-    <div className="max-w-lg">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">학생 검색</h2>
-      <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="이름 또는 학번으로 검색"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          autoFocus
-        />
-      </div>
-      {query.trim() && (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          {results.length === 0 ? (
-            <div className="p-6 text-center text-gray-400 text-sm">검색 결과가 없습니다</div>
-          ) : (
-            <div className="divide-y">
-              {results.map((s) => (
-                <Link
-                  key={s.student_id}
-                  to={`/dashboard/student/${s.student_id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <div>
-                    <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                    <span className="ml-2 text-xs text-gray-400">{s.student_id}</span>
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {s.grade}학년 {s.class}반 · {s.gender === "M" ? "남" : "여"}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+import { StudentAvgGradeCards } from "./StudentAvgGradeCards";
+import { StudentHistoryTable } from "./StudentHistoryTable";
+import {
+  AREA_KEYS, AREA_LABELS, AREA_ITEMS,
+  selectRawMeasurements, getAvailableYears, selectTrendMeasurements,
+  buildTrendData, buildAvgRecord,
+} from "./studentDetailData";
 
 export default function StudentDetail() {
   const { studentId } = useParams();
@@ -105,68 +25,24 @@ export default function StudentDetail() {
 
   // 해당 학생의 전체 원본 측정 이력 (최신순)
   const rawMeasurements = useMemo(
-    () =>
-      measurements
-        .filter((m) => m.student_id === studentId)
-        .sort((a, b) => (b.measured_at ?? b.year) > (a.measured_at ?? a.year) ? 1 : -1),
+    () => selectRawMeasurements(measurements, studentId),
     [measurements, studentId]
   );
 
   // 측정 연도 목록 (최신순)
-  const availableYears = useMemo(() => {
-    const years = [...new Set(rawMeasurements.map((m) => m.year).filter(Boolean))];
-    return years.sort((a, b) => b - a);
-  }, [rawMeasurements]);
+  const availableYears = useMemo(() => getAvailableYears(rawMeasurements), [rawMeasurements]);
 
   // 선택 연도 (null이면 최신 연도로 자동 적용)
   const activeYear = selectedYear ?? availableYears[0] ?? null;
 
-  // 테이블 헤더용 종목 정보 (최신 측정 기준)
-  const latestM = rawMeasurements[0];
-  const headerCardio = getTypeInfo(CARDIO_TYPES, latestM?.cardio_type);
-  const headerMuscle = getTypeInfo(MUSCLE_TYPES, latestM?.muscle_type);
-  const headerAgility = getTypeInfo(AGILITY_TYPES, latestM?.agility_type);
-
-  // 추이 차트용: 선택 연도의 측정 기록 (시간순 오름차순)
-  const trendMeasurements = useMemo(() => {
-    if (!activeYear) return [];
-    return [...rawMeasurements]
-      .filter((m) => String(m.year) === String(activeYear))
-      .sort((a, b) => (a.measured_at ?? "") < (b.measured_at ?? "") ? -1 : 1);
-  }, [rawMeasurements, activeYear]);
-
-  // 추이 차트 데이터 (X축: 측정일자)
-  const trendData = useMemo(() =>
-    trendMeasurements.map((m) => ({
-      label: m.measured_at?.slice(0, 10) ?? String(m.year),
-      total: m.total_grade != null ? Number(m.total_grade) : null,
-      cardio: m.cardio_grade != null ? Number(m.cardio_grade) : null,
-      muscle: m.muscle_grade != null ? Number(m.muscle_grade) : null,
-      flexibility: m.flexibility_grade != null ? Number(m.flexibility_grade) : null,
-      agility: m.agility_grade != null ? Number(m.agility_grade) : null,
-      bmi: m.bmi_grade != null ? Number(m.bmi_grade) : null,
-    })),
-  [trendMeasurements]);
+  // 추이 차트 데이터 (선택 연도, X축: 측정일자)
+  const trendData = useMemo(
+    () => buildTrendData(selectTrendMeasurements(rawMeasurements, activeYear)),
+    [rawMeasurements, activeYear]
+  );
 
   // 전체 기간 영역별 평균 등급 + 평균 측정값 (레이더 + 평균 카드 + 테이블 평균 행용)
-  const avgRecord = useMemo(() => {
-    if (!rawMeasurements.length) return null;
-    const keys = [
-      "cardio_grade", "muscle_grade", "flexibility_grade", "agility_grade", "bmi_grade", "total_grade",
-      "cardio_value", "muscle_value", "flexibility_value", "agility_value", "bmi",
-    ];
-    const result = {};
-    keys.forEach((key) => {
-      const vals = rawMeasurements
-        .map((m) => m[key])
-        .filter((v) => v != null && !isNaN(Number(v)))
-        .map(Number);
-      result[key] = vals.length > 0
-        ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
-        : null;
-    });
-    return result;
-  }, [rawMeasurements]);
+  const avgRecord = useMemo(() => buildAvgRecord(rawMeasurements), [rawMeasurements]);
 
   const toggleArea = (area) =>
     setSelectedAreas((prev) =>
@@ -244,45 +120,7 @@ export default function StudentDetail() {
 
         {/* 전체 기간 영역별 평균 등급 카드 */}
         {avgRecord && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">
-              영역별 평균 등급 (전체 측정 기간 · {rawMeasurements.length}회)
-            </h3>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {AREA_ITEMS.map(({ label, key }) => {
-                const val = avgRecord[key];
-                const color = val != null ? GRADE_COLORS[Math.round(val)] : undefined;
-                return (
-                  <div key={key} className="bg-white rounded-xl border p-3 text-center">
-                    <div className="text-xs text-gray-500 mb-1">{label}</div>
-                    {val != null ? (
-                      <span
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white"
-                        style={{ backgroundColor: color }}
-                      >
-                        {val}등급
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-sm">-</span>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="bg-blue-50 rounded-xl border border-blue-200 p-3 text-center">
-                <div className="text-xs text-blue-600 font-medium mb-1">종합</div>
-                {avgRecord.total_grade != null ? (
-                  <span
-                    className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold text-white"
-                    style={{ backgroundColor: GRADE_COLORS[Math.round(avgRecord.total_grade)] }}
-                  >
-                    {avgRecord.total_grade}등급
-                  </span>
-                ) : (
-                  <span className="text-gray-400 text-sm">-</span>
-                )}
-              </div>
-            </div>
-          </div>
+          <StudentAvgGradeCards avgRecord={avgRecord} count={rawMeasurements.length} />
         )}
 
         {/* 레이더 + 체력 등급 추이 */}
@@ -342,148 +180,7 @@ export default function StudentDetail() {
 
         {/* 전체 측정 이력 테이블 */}
         {rawMeasurements.length > 0 && (
-          <div className="bg-white rounded-xl border overflow-hidden">
-            <div className="px-4 py-3 border-b bg-gray-50">
-              <h3 className="text-sm font-semibold text-gray-700">전체 측정 기록</h3>
-              <p className="text-xs text-gray-400 mt-0.5">측정 회차별 실측값 및 등급 · 마지막 행: 전체 평균</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">측정일시</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">연도</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                      심폐지구력
-                      {latestM && <div className="font-normal text-gray-400">{headerCardio.label} ({headerCardio.unit})</div>}
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                      근력·근지구력
-                      {latestM && <div className="font-normal text-gray-400">{headerMuscle.label} ({headerMuscle.unit})</div>}
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                      유연성
-                      <div className="font-normal text-gray-400">{FLEXIBILITY_ITEM.label} ({FLEXIBILITY_ITEM.unit})</div>
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                      순발력
-                      {latestM && <div className="font-normal text-gray-400">{headerAgility.label} ({headerAgility.unit})</div>}
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">BMI</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">종합</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {rawMeasurements.map((m) => {
-                    const cardioInfo = getTypeInfo(CARDIO_TYPES, m.cardio_type);
-                    const muscleInfo = getTypeInfo(MUSCLE_TYPES, m.muscle_type);
-                    const agilityInfo = getTypeInfo(AGILITY_TYPES, m.agility_type);
-                    return (
-                      <tr key={m.measurement_id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-gray-500 whitespace-nowrap text-xs">
-                          {formatDatetime(m.measured_at)}
-                        </td>
-                        <td className="px-3 py-2 font-medium text-gray-700">{m.year}</td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-gray-700">
-                              {m.cardio_value != null ? `${m.cardio_value}${cardioInfo.unit}` : "—"}
-                            </span>
-                            <GradeBadge grade={m.cardio_grade} />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-gray-700">
-                              {m.muscle_value != null ? `${m.muscle_value}${muscleInfo.unit}` : "—"}
-                            </span>
-                            <GradeBadge grade={m.muscle_grade} />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-gray-700">
-                              {m.flexibility_value != null ? `${m.flexibility_value}${FLEXIBILITY_ITEM.unit}` : "—"}
-                            </span>
-                            <GradeBadge grade={m.flexibility_grade} />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-gray-700">
-                              {m.agility_value != null ? `${m.agility_value}${agilityInfo.unit}` : "—"}
-                            </span>
-                            <GradeBadge grade={m.agility_grade} />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium text-gray-700">
-                              {m.bmi != null ? m.bmi : "—"}
-                            </span>
-                            <GradeBadge grade={m.bmi_grade} />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2"><GradeBadge grade={m.total_grade} size="sm" /></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                {/* 평균 행 */}
-                {avgRecord && (
-                  <tfoot>
-                    <tr className="bg-blue-50 border-t-2 border-blue-200 font-medium">
-                      <td className="px-3 py-2 text-xs text-blue-700 whitespace-nowrap">평균</td>
-                      <td className="px-3 py-2 text-xs text-blue-500">전체</td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-blue-700">
-                            {avgRecord.cardio_value != null ? `${avgRecord.cardio_value}` : "—"}
-                          </span>
-                          <GradeBadge grade={avgRecord.cardio_grade != null ? Math.round(avgRecord.cardio_grade) : null} />
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-blue-700">
-                            {avgRecord.muscle_value != null ? `${avgRecord.muscle_value}` : "—"}
-                          </span>
-                          <GradeBadge grade={avgRecord.muscle_grade != null ? Math.round(avgRecord.muscle_grade) : null} />
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-blue-700">
-                            {avgRecord.flexibility_value != null ? `${avgRecord.flexibility_value}cm` : "—"}
-                          </span>
-                          <GradeBadge grade={avgRecord.flexibility_grade != null ? Math.round(avgRecord.flexibility_grade) : null} />
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-blue-700">
-                            {avgRecord.agility_value != null ? `${avgRecord.agility_value}` : "—"}
-                          </span>
-                          <GradeBadge grade={avgRecord.agility_grade != null ? Math.round(avgRecord.agility_grade) : null} />
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm text-blue-700">
-                            {avgRecord.bmi != null ? avgRecord.bmi : "—"}
-                          </span>
-                          <GradeBadge grade={avgRecord.bmi_grade != null ? Math.round(avgRecord.bmi_grade) : null} />
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <GradeBadge grade={avgRecord.total_grade != null ? Math.round(avgRecord.total_grade) : null} size="sm" />
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          </div>
+          <StudentHistoryTable rawMeasurements={rawMeasurements} avgRecord={avgRecord} />
         )}
       </div>
     </DashboardLayout>

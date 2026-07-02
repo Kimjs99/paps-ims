@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, LogOut, TestTube2, Loader2, CheckCircle, AlertCircle, RotateCcw } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
-import { revokeToken, sheetsRequest } from "../../api/sheetsClient";
+import { useLogout } from "../../hooks/useLogout";
+import { sheetsRequest } from "../../api/sheetsClient";
 import { checkSchemaVersion } from "../../api/settings";
 import { useSchemaCheck } from "../../hooks/useSchemaCheck";
 import { SCHEMA_VERSION, SHEET_NAMES } from "../../constants/paps";
@@ -18,17 +18,16 @@ import { Alert, AlertDescription } from "../../components/ui/alert";
 import { toast } from "../../store/toastStore";
 import { getStudents } from "../../api/students";
 import { getMeasurements, batchUpdateMeasurementGrades } from "../../api/measurements";
-import { calcGrade, calcTotalGrade } from "../../utils/gradeCalc";
-import { calcBMIGrade } from "../../utils/bmiCalc";
+import { buildGrades } from "../../utils/gradeCalc";
 
 export default function Settings() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, clearUser } = useAuthStore();
+  const { user } = useAuthStore();
   const {
     sheetId, schoolName, schoolYear, teacherName,
-    setSheetId, setSchoolInfo, resetSettings,
+    setSheetId, setSchoolInfo,
   } = useSettingsStore();
+  const handleLogout = useLogout();
 
   const { sheetVersion, checkAndMigrate } = useSchemaCheck();
   const [form, setForm] = useState({ schoolName, schoolYear, teacherName });
@@ -111,28 +110,21 @@ export default function Settings() {
         const student = studentMap.get(m.student_id);
         if (!student) return;
 
-        // 측정 당시 BMI 이력 보존 — 현재 체격으로 재계산해 덮어쓰지 않는다
-        const bmi = m.bmi;
-        const bmi_grade = bmi != null ? calcBMIGrade(bmi) : null;
-
-        const cardio_grade = calcGrade(m.cardio_value, m.cardio_type, student.grade, student.gender, gradesData);
-        const muscle_grade = calcGrade(m.muscle_value, m.muscle_type, student.grade, student.gender, gradesData);
-        const flexibility_grade = calcGrade(m.flexibility_value, "sit_and_reach", student.grade, student.gender, gradesData);
-        const agility_grade = calcGrade(m.agility_value, m.agility_type, student.grade, student.gender, gradesData);
-        const total_grade = calcTotalGrade([cardio_grade, muscle_grade, flexibility_grade, agility_grade, bmi_grade]);
+        // 측정 당시 BMI 이력 보존 — 현재 체격으로 재계산해 덮어쓰지 않는다 (options.bmi로 고정 전달)
+        const grades = buildGrades(m, student, gradesData, { bmi: m.bmi });
 
         // 변경이 있는 행만 업데이트
         if (
-          cardio_grade !== m.cardio_grade ||
-          muscle_grade !== m.muscle_grade ||
-          flexibility_grade !== m.flexibility_grade ||
-          agility_grade !== m.agility_grade ||
-          bmi_grade !== m.bmi_grade ||
-          total_grade !== m.total_grade
+          grades.cardio_grade !== m.cardio_grade ||
+          grades.muscle_grade !== m.muscle_grade ||
+          grades.flexibility_grade !== m.flexibility_grade ||
+          grades.agility_grade !== m.agility_grade ||
+          grades.bmi_grade !== m.bmi_grade ||
+          grades.total_grade !== m.total_grade
         ) {
           toUpdate.push({
             rowIndex,
-            measurement: { ...m, bmi, bmi_grade, cardio_grade, muscle_grade, flexibility_grade, agility_grade, total_grade },
+            measurement: { ...m, ...grades },
           });
         }
       });
@@ -153,13 +145,6 @@ export default function Settings() {
       setRecalcState("error");
       setRecalcMsg(err?.message || "알 수 없는 오류가 발생했습니다.");
     }
-  };
-
-  const handleLogout = () => {
-    revokeToken();
-    clearUser();
-    resetSettings();
-    navigate("/onboarding", { replace: true });
   };
 
   return (

@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Home,
   BarChart2,
@@ -8,17 +8,15 @@ import {
   Settings,
   LogOut,
   LayoutDashboard,
-  Sun,
-  Moon,
-  Monitor,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
-import { revokeToken } from "../../api/sheetsClient";
+import { useLogout } from "../../hooks/useLogout";
 import { cn } from "../../lib/utils";
 import { LastUpdatedBar } from "../dashboard/LastUpdatedBar";
 import { PollingIndicator } from "../dashboard/PollingIndicator";
 import { AuthExpiredBanner } from "./AuthExpiredBanner";
+import { ThemeToggle } from "./ThemeToggle";
 
 const sidebarItems = [
   { to: "/dashboard", label: "대시보드 홈", Icon: LayoutDashboard, exact: true },
@@ -50,16 +48,9 @@ function NavItem({ to, label, Icon: ItemIcon, exact, location }) {
 
 export function DashboardLayout({ children, dataUpdatedAt }) {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, clearUser } = useAuthStore();
-  const { schoolName, teacherName, resetSettings, themeMode, setThemeMode } = useSettingsStore();
-
-  const handleLogout = () => {
-    revokeToken();
-    clearUser();
-    resetSettings();
-    navigate("/onboarding", { replace: true });
-  };
+  const { user } = useAuthStore();
+  const { schoolName, teacherName } = useSettingsStore();
+  const handleLogout = useLogout();
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -79,27 +70,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
               <LastUpdatedBar dataUpdatedAt={dataUpdatedAt} />
             </div>
             {/* 테마 토글 */}
-            <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-              {[
-                { mode: "light", Icon: Sun, label: "주간 모드" },
-                { mode: "auto", Icon: Monitor, label: "자동 모드" },
-                { mode: "dark", Icon: Moon, label: "야간 모드" },
-              ].map(({ mode, Icon, label }) => (
-                <button
-                  key={mode}
-                  onClick={() => setThemeMode(mode)}
-                  aria-label={label}
-                  className={cn(
-                    "p-1 rounded-md transition-colors",
-                    themeMode === mode
-                      ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm"
-                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  )}
-                >
-                  <Icon size={14} />
-                </button>
-              ))}
-            </div>
+            <ThemeToggle iconSize={14} />
             <Link
               to="/"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition-colors"

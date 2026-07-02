@@ -8,6 +8,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { FITNESS_AREAS } from "../../constants/paps";
 
 const AREA_COLORS = {
   cardio: "#2563EB",
@@ -18,12 +19,9 @@ const AREA_COLORS = {
   total: "#374151",
 };
 
+// bmi는 "비만" 표기
 const AREA_LABELS = {
-  cardio: "심폐지구력",
-  muscle: "근력·근지구력",
-  flexibility: "유연성",
-  agility: "순발력",
-  bmi: "비만",
+  ...Object.fromEntries(FITNESS_AREAS.map((a) => [a.key, a.labelAlt ?? a.label])),
   total: "종합",
 };
 

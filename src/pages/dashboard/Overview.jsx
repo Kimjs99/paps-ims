@@ -7,11 +7,13 @@ import { GenderComparisonChart } from "../../components/charts/GenderComparisonC
 import { YearlyTrendChart } from "../../components/charts/YearlyTrendChart";
 import { BmiScatterChart } from "../../components/charts/BmiScatterChart";
 import { useDashboardData, useGenderComparison, useYearlyTrend, useScatterData } from "../../hooks/useDashboard";
+import { FITNESS_AREAS } from "../../constants/paps";
 
-const AREA_KEYS = ["total", "cardio", "muscle", "flexibility", "agility", "bmi"];
+// 추이 토글: 종합 + 5개 영역 (bmi는 "비만" 표기)
+const AREA_KEYS = ["total", ...FITNESS_AREAS.map((a) => a.key)];
 const AREA_LABELS = {
-  total: "종합", cardio: "심폐지구력", muscle: "근력·근지구력",
-  flexibility: "유연성", agility: "순발력", bmi: "비만",
+  total: "종합",
+  ...Object.fromEntries(FITNESS_AREAS.map((a) => [a.key, a.labelAlt ?? a.label])),
 };
 
 export default function Overview() {

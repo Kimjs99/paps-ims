@@ -7,6 +7,8 @@ import { AreaRadarChart } from "../../components/charts/AreaRadarChart";
 import { GradeBadge } from "../../components/ui/GradeBadge";
 import { useHistogramData, deduplicateMeasurements } from "../../hooks/useDashboard";
 import { useMeasurements, useStudents } from "../../hooks/useSheets";
+import { FITNESS_AREAS } from "../../constants/paps";
+import { avgOf, avgFixed1 } from "../../utils/stats";
 import { Users, CheckCircle, Star } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -110,10 +112,8 @@ export default function ClassDetail() {
       if (!grouped.has(m.student_id)) grouped.set(m.student_id, []);
       grouped.get(m.student_id).push(m);
     });
-    const avgField = (records, key) => {
-      const vals = records.map((r) => r[key]).filter((v) => v != null && !isNaN(Number(v))).map(Number);
-      return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    };
+    const avgField = (records, key) =>
+      avgOf(records.map((r) => r[key]).filter((v) => v != null && !isNaN(Number(v))).map(Number));
     return Array.from(grouped.values()).map((records) => ({
       student_id: records[0].student_id,
       cardio_value: avgField(records, "cardio_value"),
@@ -129,9 +129,7 @@ export default function ClassDetail() {
   const totalStudents = classStudents.length;
   const completionRate = totalStudents > 0 ? Math.round((measuredCount / totalStudents) * 100) : 0;
   const gradesWithValue = dedupedMeasurements.filter((m) => m.total_grade);
-  const avgGrade = gradesWithValue.length > 0
-    ? (gradesWithValue.reduce((a, m) => a + m.total_grade, 0) / gradesWithValue.length).toFixed(1)
-    : null;
+  const avgGrade = avgOf(gradesWithValue.map((m) => m.total_grade))?.toFixed(1) ?? null;
 
   // 등급 분포
   const gradeDistData = [1, 2, 3, 4, 5].map((g) => ({
@@ -141,21 +139,10 @@ export default function ClassDetail() {
   }));
 
   // 영역별 평균
-  const areaAvgs = [
-    { area: "심폐지구력", key: "cardio_grade" },
-    { area: "근력·근지구력", key: "muscle_grade" },
-    { area: "유연성", key: "flexibility_grade" },
-    { area: "순발력", key: "agility_grade" },
-    { area: "BMI", key: "bmi_grade" },
-  ].map(({ area, key }) => {
-    const vals = dedupedMeasurements.filter((m) => m[key]).map((m) => Number(m[key]));
-    return {
-      area,
-      value: vals.length > 0
-        ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
-        : null,
-    };
-  });
+  const areaAvgs = FITNESS_AREAS.map(({ label, gradeField }) => ({
+    area: label,
+    value: avgFixed1(dedupedMeasurements.filter((m) => m[gradeField]).map((m) => Number(m[gradeField]))),
+  }));
 
   return (
     <DashboardLayout dataUpdatedAt={dataUpdatedAt}>

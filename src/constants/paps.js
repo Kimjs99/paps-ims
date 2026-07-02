@@ -21,6 +21,20 @@ export const FLEXIBILITY_ITEM = {
   unit: "cm",
 };
 
+// 5개 체력요소 정의 (등급/값/종목 필드 키 포함) — 영역 배열을 재선언하지 말고 이 상수를 사용
+// label: 기본 표기("BMI"), labelAlt: "비만" 표기 사이트용, labelFull: "비만(BMI)" 표기 사이트용
+// (표시 문구가 화면마다 다르므로 각 사이트는 자기 표기의 필드를 선택해 사용 — 렌더 텍스트 변경 금지)
+export const FITNESS_AREAS = [
+  { key: "cardio",      label: "심폐지구력",    gradeField: "cardio_grade",      valueField: "cardio_value",      typeField: "cardio_type" },
+  { key: "muscle",      label: "근력·근지구력", gradeField: "muscle_grade",      valueField: "muscle_value",      typeField: "muscle_type" },
+  { key: "flexibility", label: "유연성",        gradeField: "flexibility_grade", valueField: "flexibility_value" },
+  { key: "agility",     label: "순발력",        gradeField: "agility_grade",     valueField: "agility_value",     typeField: "agility_type" },
+  { key: "bmi",         label: "BMI", labelAlt: "비만", labelFull: "비만(BMI)", gradeField: "bmi_grade", valueField: "bmi" },
+];
+
+// 5개 영역 등급 필드 키 목록 (cardio_grade ... bmi_grade)
+export const FITNESS_GRADE_FIELDS = FITNESS_AREAS.map((a) => a.gradeField);
+
 // 등급 색상
 export const GRADE_COLORS = {
   1: "#2563EB",

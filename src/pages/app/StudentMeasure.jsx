@@ -10,7 +10,7 @@ import { useStudents, useMeasurements, useSaveMeasurement, useUpdateStudent } fr
 import { useCalculateGrades } from "../../hooks/useGradeCalc";
 import { measurementSchema } from "../../utils/validators";
 import { calcBMI } from "../../utils/bmiCalc";
-import { CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES, GRADE_LABELS } from "../../constants/paps";
+import { CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES, GRADE_LABELS, FITNESS_AREAS } from "../../constants/paps";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -22,13 +22,10 @@ import {
 } from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
 
-const GRADE_AREA_LABELS = {
-  cardio_grade: "심폐지구력",
-  muscle_grade: "근력·근지구력",
-  flexibility_grade: "유연성",
-  agility_grade: "순발력",
-  bmi_grade: "BMI",
-};
+// 등급 미리보기 라벨 (bmi는 "BMI" 표기)
+const GRADE_AREA_LABELS = Object.fromEntries(
+  FITNESS_AREAS.map((a) => [a.gradeField, a.label])
+);
 
 export default function StudentMeasure() {
   const { classId, studentId } = useParams();
