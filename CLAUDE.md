@@ -87,7 +87,7 @@ ClassReportPreview / PersonalGrowthCard
 
 ## Google Sheets 스키마 규칙
 
-- **시트 탭 이름은 영문 고정**: `students`, `measurements`, `grades_standard`, `settings`, `changelog` — 코드가 `SHEET_NAMES` 상수로 직접 참조
+- **시트 탭 이름은 영문 고정**: `students`, `measurements`, `grades_standard`, `settings` — 코드가 `SHEET_NAMES` 상수로 직접 참조 (템플릿의 `changelog` 탭은 코드에서 미사용 — v0.12.2에서 dead code 제거)
 - **`settings` 시트 A열 키값 영문 고정**: `SCHEMA_VERSION`, `school_name`, `school_year`, `teacher_name`
 - **컬럼 순서 변경 금지**: `students`·`measurements` 시트는 인덱스 기반 파싱
 - **`students` 컬럼 순서** (9개): 학번, 이름, 성별, 학년, 반, 키(cm), 몸무게(kg), 등록일시, 활성여부 — `birth_date` 없음. 키/몸무게는 선택값으로 빈 문자열 허용, `rowToStudent`에서 `undefined` 반환(0 아님)
@@ -120,9 +120,13 @@ ClassReportPreview / PersonalGrowthCard
 
 ```
 VITE_GOOGLE_CLIENT_ID   — OAuth 2.0 클라이언트 ID
-VITE_GOOGLE_API_KEY     — Sheets API 키 (현재 코드에서 미사용 — 모든 API 호출은 OAuth 토큰으로 처리)
 VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 ```
+
+## 버전 관리 규칙
+
+- `package.json`의 `version`은 항상 CHANGELOG 최신 버전과 일치시킨다 — 릴리스 커밋마다 함께 올림.
+- 버전 증가 기준: 버그 배치는 patch(x.y.**z**), 기능·리팩토링 배치는 minor(x.**y**.0).
 
 ## 배포
 

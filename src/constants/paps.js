@@ -47,7 +47,6 @@ export const SHEET_NAMES = {
   MEASUREMENTS: "measurements",
   GRADES_STANDARD: "grades_standard",
   SETTINGS: "settings",
-  CHANGELOG: "changelog",
 };
 
 // 측정값 유효 범위 (이상값 감지용)

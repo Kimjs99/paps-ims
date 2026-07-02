@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.12.2] - 2026-07-03
+
+### 🔧 Chores (위생 배치)
+- **xlsx 0.18.5 → 0.20.3** — 알려진 CVE(Prototype Pollution·ReDoS) 해소, SheetJS 공식 CDN tarball로 교체
+- **미사용 radix 패키지 4종 제거** — `dropdown-menu`·`separator`·`tabs`·`toast` (토스트는 자체 `toastStore`+`Toaster` 구현 사용 중)
+- **죽은 코드 제거** — `src/api/changelog.js`(import 0건) + `SHEET_NAMES.CHANGELOG` 키
+- **`.env.example` 정리** — 미사용 `VITE_GOOGLE_API_KEY` 제거 (모든 API 호출은 OAuth 토큰)
+- **`files/` gitignore 추가** — 더미 CSV 트래킹 방지
+- **버전 규칙 명문화** — package.json `version`을 CHANGELOG와 동기화(0.7.0 → 0.12.x), 규칙 CLAUDE.md 기록
+
 ## [v0.12.1] - 2026-07-03
 
 ### 🐛 Bug Fixes (전수 리뷰 버그 배치 — 입력 손실 / 정확성 / 인증·동시성)

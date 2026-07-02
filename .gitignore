@@ -28,3 +28,6 @@ coverage
 *.sw?
 .vercel
 .grades_standard_todo.md
+
+# 더미 데이터·수동 산출물 (트래킹 사고 방지)
+files/
