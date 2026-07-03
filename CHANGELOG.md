@@ -13,6 +13,9 @@ All notable changes to this project will be documented in this file.
 ### ✅ Tests
 - Vitest 327 → **339 케이스**: parseCsvWithLines(빈 줄·BOM·CRLF·행 번호), seedGradesStandard(PUT 선행·범위 산식·PUT 실패 시 clear 미호출·문자열 직렬화·미지원 학교급)
 
+### 📝 Docs
+- 전수 리뷰 계획 문서 백로그 전 항목 완결 표시 — #4·#5·#7(v0.16.0)·BMI 정책(v0.15.0) (270f698)
+
 ## [v0.15.0] - 2026-07-03
 
 ### ✨ Features
