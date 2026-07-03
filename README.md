@@ -23,7 +23,6 @@ bun run dev            # http://localhost:5174
 | 변수 | 설명 |
 |------|------|
 | `VITE_GOOGLE_CLIENT_ID` | OAuth 2.0 클라이언트 ID |
-| `VITE_GOOGLE_API_KEY` | Sheets API 키 |
 | `VITE_SHEETS_TEMPLATE_ID` | 공개 템플릿 Sheet ID |
 
 ## 배포

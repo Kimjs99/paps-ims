@@ -95,10 +95,28 @@ ClassReportPreview / PersonalGrowthCard
 - **UUID는 클라이언트에서 생성**: `uuid` 라이브러리 사용
 - **측정일시는 KST 저장**: `nowKST()` (`src/api/sheetsClient.js`) 사용 — `new Date().toISOString()` 직접 사용 금지 (UTC 저장됨)
 
+## 페이지-순수 함수 분리 패턴
+
+페이지 컴포넌트는 오케스트레이션(DOM·파일 I/O·훅 배선)만 담당하고, 로직은 같은 디렉토리의 순수 함수 모듈로 분리해 단위 테스트한다. 새 로직은 컴포넌트가 아니라 이 모듈들에 추가할 것.
+
+- `pages/app/classMeasureForm.js` — 프리필 병합·종목 복원·저장 행 구성(`buildMeasurementRows`)
+- `pages/app/classMeasureDirty.js` — **저장 대상과 이탈 경고의 단일 기준** `selectDirtyStudents` (기준선 스냅샷 + 종목 변경 영역). 저장/경고 판정을 이 함수 외의 기준으로 만들면 v0.12.1에서 잡은 불일치 버그가 재발한다
+- `pages/app/classMeasureCsv.js` — 측정 CSV 템플릿 생성·업로드 반영
+- `pages/dashboard/reportData.js` / `studentDetailData.js` — 보고서 평균·학생 상세 가공
+
+## 인증 만료 처리 계약
+
+`AUTH_EXPIRED`는 **강제 로그아웃·리디렉트 금지** — `App.jsx`의 QueryCache/MutationCache `onError`가 `authStore.setAuthExpired(true)`로 전역 재로그인 배너(`AuthExpiredBanner`)만 올린다. 측정 입력 중인 폼 값을 유실시키지 않기 위한 계약이므로, 새 API 경로에서 401/AUTH_EXPIRED를 직접 로그아웃으로 처리하지 말 것. 재로그인 팝업은 사용자 제스처 시점에만 연다(무음 팝업은 브라우저가 차단).
+
+## rowIndex 쓰기 가드
+
+시트 행을 rowIndex로 갱신·삭제하는 모든 경로는 `api/rowGuard.js`를 경유한다 — 쓰기 직전 key 컬럼(A열)을 재조회해 대조하고, 불일치(다른 탭에서 행 삭제 등으로 행 밀림) 시 `ROW_MISMATCH` code로 throw. 호출부는 `err?.code === "ROW_MISMATCH"` 분기로 새로고침 안내를 띄운다. 새 rowIndex 기반 쓰기를 추가할 때 이 가드를 생략하면 엉뚱한 학생의 기록을 덮어쓸 수 있다.
+
 ## 라우팅 구조
 
 `ProtectedRoute`는 `isAuthenticated && isOnboardingComplete` 둘 다 충족해야 통과.
 모든 페이지는 `React.lazy`로 지연 로드되며 최상단 `<Suspense>`로 감싸져 있다.
+`/measure/:classId`(·`/:studentId`)는 `App.jsx`의 Keyed 래퍼로 param 변경 시 강제 재마운트 — "프리필 1회" 가드(`initializedRef`)가 직행 내비게이션에서도 리셋되도록 유지할 것.
 
 ```
 /onboarding               — 5단계 온보딩 (인증 불필요, 즉시 로드)
@@ -158,7 +176,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 ## 유틸리티 (`src/utils/`)
 
 - `bmiCalc.js` — BMI 계산 및 등급 판정 — `BMI_STANDARDS_BY_LEVEL`(교육부 PAPS 공식 학년·성별 기준, 초4~고3) 기반. `calcBMIGrade(bmi, {schoolLevel, grade, gender})` — 기준 미제공 학년(초3)은 null. 등급: 1 정상/2 과체중/3 경도비만/4 마름/5 고도비만
-- `gradeCalc.js` — `calcGrade()`, `calcTotalGrade()`, `buildGrades()` — grades_standard 기반 등급 계산
+- `gradeCalc.js` — `calcGrade()`, `calcTotalGrade()`, `buildGrades(formValues, student, gradesData, options)` — 등급 계산 단일 진입점. `options.bmi`(재계산 시 측정 당시 BMI 보존)·`options.schoolLevel`(BMI 공식 기준표 조회 — 미지정 시 bmi_grade null)
 - `gradesStandardSeed.js` — 교육부 공식 PAPS 기준표 상수 (`GRADES_SEED_BY_LEVEL`, `SCHOOL_LEVELS`, `GRADE_RANGE_BY_LEVEL`) — 초등 3~6·중학 1~3·고등 1~3학년 × 성별 × 8종목
 - `csv.js` — `parseCsvLine`(따옴표 인식)·`parseCsv`·`parseCsvWithLines`(원본 행 번호 보존 — 오류 안내용)·`downloadCsv`(BOM 옵션)
 - `validators.js` — Zod 스키마 기반 유효성 검사. `studentSchema`의 height/weight는 optional(`z.preprocess` 패턴). `measurementSchema`에도 height/weight 포함 — 측정 폼에서 입력 시 student 레코드 업데이트 용도
