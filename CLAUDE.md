@@ -160,6 +160,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - `bmiCalc.js` — BMI 계산 및 등급 판정 — `BMI_STANDARDS_BY_LEVEL`(교육부 PAPS 공식 학년·성별 기준, 초4~고3) 기반. `calcBMIGrade(bmi, {schoolLevel, grade, gender})` — 기준 미제공 학년(초3)은 null. 등급: 1 정상/2 과체중/3 경도비만/4 마름/5 고도비만
 - `gradeCalc.js` — `calcGrade()`, `calcTotalGrade()`, `buildGrades()` — grades_standard 기반 등급 계산
 - `gradesStandardSeed.js` — 교육부 공식 PAPS 기준표 상수 (`GRADES_SEED_BY_LEVEL`, `SCHOOL_LEVELS`, `GRADE_RANGE_BY_LEVEL`) — 초등 3~6·중학 1~3·고등 1~3학년 × 성별 × 8종목
+- `csv.js` — `parseCsvLine`(따옴표 인식)·`parseCsv`·`parseCsvWithLines`(원본 행 번호 보존 — 오류 안내용)·`downloadCsv`(BOM 옵션)
 - `validators.js` — Zod 스키마 기반 유효성 검사. `studentSchema`의 height/weight는 optional(`z.preprocess` 패턴). `measurementSchema`에도 height/weight 포함 — 측정 폼에서 입력 시 student 레코드 업데이트 용도
 - `pdfExport.js` — `exportElementToPdf`, `exportMultiPagePdf`, `exportAllPersonalCards`
 - `excelExport.js` — `exportMeasurementsToExcel()` — xlsx 원시 데이터 내보내기
@@ -187,6 +188,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 - **OAuth 팝업 닫힘 감지**: `openOAuthPopup` 내부 polling이 `popup.closed` 접근 시 COOP `SecurityError` 발생 → try-catch로 억제. 팝업이 닫히면 `popup_closed` 에러 throw → 호출부에서 `AUTH_EXPIRED` 처리
 - **아이콘 전용 버튼·링크**: `aria-label` 필수 — 없으면 스크린리더가 버튼 목적을 알 수 없음
 - **`<Progress>` 컴포넌트**: `aria-label` 필수 — Radix UI progressbar role은 accessible name이 없으면 Lighthouse 경고 발생
+- **`seedGradesStandard`는 PUT→잔행 clear 순서 고정**: clear를 먼저 하면 중간 실패 시 기준표가 빈 채로 남는다. 학교급 변경은 설정 → 학교 정보에서 확인 다이얼로그를 거쳐 재시드된다(성공 후에만 학교급 저장)
 - **`grades_standard` 시드 이후 기존 측정 등급이 null**: 기준표 시드 전에 저장된 측정 기록은 등급 컬럼이 비어있음 → 설정 → 데이터 관리 → "재계산" 버튼으로 일괄 업데이트. `api/measurements.js`의 `batchUpdateMeasurementGrades()` 사용
 - **학급 하드 삭제는 되돌릴 수 없음**: `api/deleteClass.js`의 `deleteClassHard()`는 `batchUpdate deleteDimension`으로 행을 영구 삭제 — 소프트 삭제(`is_active=false`)와 혼동 금지
 - **키/몸무게 측정 시 student 레코드 업데이트**: `ClassMeasure`·`StudentMeasure` 저장 시 폼의 height/weight가 기존 student 값과 다르면 `useUpdateStudent`로 students 시트도 함께 업데이트. 측정 CSV 템플릿 컬럼 순서: `student_id, 이름, 성별, 학년, 반, 키(cm), 몸무게(kg), 심폐, 근력, 유연성, 순발력`

@@ -20,7 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
-import { parseCsv, downloadCsv } from "../../utils/csv";
+import { parseCsvWithLines, downloadCsv } from "../../utils/csv";
 
 function StudentForm({ onSubmit, isLoading, schema, gradeOptions }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
@@ -144,10 +144,10 @@ export default function Students() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const rows = parseCsv(ev.target.result);
+      const rows = parseCsvWithLines(ev.target.result);
       const valid = [];
       const errors = [];
-      rows.slice(1).forEach((cols, i) => {
+      rows.slice(1).forEach(({ line, cells: cols }) => {
         const [student_id, name, gender, grade, cls, height, weight] = cols;
         const result = studentSchema.safeParse({
           student_id: student_id ?? "",
@@ -163,7 +163,7 @@ export default function Students() {
           valid.push(result.data);
         } else {
           const reasons = result.error.issues.map((iss) => iss.message).join(", ");
-          errors.push(`${i + 2}행: ${reasons}`);
+          errors.push(`${line}행: ${reasons}`); // 원본 파일 행 번호 (빈 줄 포함 기준)
         }
       });
       setCsvPreview(valid.length > 0 ? valid : null);

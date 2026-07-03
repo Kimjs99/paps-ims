@@ -15,10 +15,18 @@ import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Alert, AlertDescription } from "../../components/ui/alert";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "../../components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
 import { getStudents } from "../../api/students";
 import { getMeasurements, batchUpdateMeasurementGrades } from "../../api/measurements";
+import { seedGradesStandard } from "../../api/gradesStandard";
 import { buildGrades } from "../../utils/gradeCalc";
+import { SCHOOL_LEVELS } from "../../utils/gradesStandardSeed";
 
 export default function Settings() {
   const queryClient = useQueryClient();
@@ -30,19 +38,51 @@ export default function Settings() {
   const handleLogout = useLogout();
 
   const { sheetVersion, checkAndMigrate } = useSchemaCheck();
-  const [form, setForm] = useState({ schoolName, schoolYear, teacherName });
+  const [form, setForm] = useState({ schoolName, schoolYear, teacherName, schoolLevel });
   const [newSheetId, setNewSheetId] = useState(sheetId || "");
   const [testState, setTestState] = useState(null); // null | "testing" | "ok" | "error"
   const [testMsg, setTestMsg] = useState("");
   const [saved, setSaved] = useState(false);
   const [recalcState, setRecalcState] = useState(null); // null | "loading" | "done" | "error"
   const [recalcMsg, setRecalcMsg] = useState("");
+  const [reseedConfirmOpen, setReseedConfirmOpen] = useState(false);
+  const [reseeding, setReseeding] = useState(false);
 
-  const handleSchoolSave = () => {
-    setSchoolInfo(form);
+  const markSaved = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleSchoolSave = () => {
+    // 학교급 변경은 grades_standard 재시드가 필요 — 확인 다이얼로그를 거쳐 저장
+    if (form.schoolLevel !== schoolLevel) {
+      setReseedConfirmOpen(true);
+      return;
+    }
+    setSchoolInfo(form);
+    markSaved();
     toast.success("학교 정보가 저장됐습니다.");
+  };
+
+  // 학교급 변경 확정: 기준표 재시드 성공 후에만 학교급 저장 (실패 시 기존 학교급 유지)
+  const handleReseedConfirm = async () => {
+    setReseeding(true);
+    try {
+      await seedGradesStandard(sheetId, form.schoolLevel);
+      setSchoolInfo(form);
+      queryClient.invalidateQueries({ queryKey: ["grades_standard"] });
+      setReseedConfirmOpen(false);
+      markSaved();
+      toast.success(
+        `학교급이 ${form.schoolLevel}(으)로 변경되고 기준표가 재등록됐습니다. 기존 측정 기록은 아래 "재계산"을 실행하세요.`
+      );
+    } catch (err) {
+      console.error("[reseedGradesStandard]", err);
+      // PUT 성공·clear 실패 시 시트에는 새 기준표가 이미 쓰였을 수 있음 — 시트 상태를 단정하지 않고 재시도 유도
+      toast.error("기준표 재등록이 완료되지 않았습니다. 학교급 변경은 저장되지 않았으니 다시 시도해주세요.");
+    } finally {
+      setReseeding(false);
+    }
   };
 
   const handleSheetTest = async () => {
@@ -244,12 +284,61 @@ export default function Settings() {
                   onChange={(e) => setForm((f) => ({ ...f, schoolYear: Number(e.target.value) }))}
                 />
               </div>
+              <div className="space-y-1 col-span-2">
+                <Label>학교급</Label>
+                <Select
+                  value={form.schoolLevel}
+                  onValueChange={(v) => setForm((f) => ({ ...f, schoolLevel: v }))}
+                >
+                  <SelectTrigger aria-label="학교급 선택">
+                    <SelectValue placeholder="학교급 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SCHOOL_LEVELS.map((lv) => (
+                      <SelectItem key={lv} value={lv}>{lv}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.schoolLevel !== schoolLevel && (
+                  <p className="text-xs text-amber-600">
+                    학교급을 변경하면 PAPS 등급 기준표(grades_standard)가 {form.schoolLevel} 기준으로 다시 등록됩니다.
+                  </p>
+                )}
+              </div>
             </div>
             <Button onClick={handleSchoolSave} variant={saved ? "outline" : "default"}>
               {saved ? <><CheckCircle className="h-4 w-4 text-green-500" /> 저장됨</> : "저장"}
             </Button>
           </CardContent>
         </Card>
+
+        {/* 학교급 변경 → 기준표 재시드 확인 */}
+        <Dialog open={reseedConfirmOpen} onOpenChange={(open) => { if (!open && !reseeding) setReseedConfirmOpen(false); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>학교급 변경 확인</DialogTitle>
+              <DialogDescription className="space-y-2">
+                <span className="block">
+                  학교급을 <b>{schoolLevel}</b> → <b>{form.schoolLevel}</b>(으)로 변경합니다.
+                </span>
+                <span className="block">
+                  grades_standard 시트의 기준표가 {form.schoolLevel} 공식 기준으로 <b>덮어쓰기</b>되며,
+                  기존 측정 기록의 등급은 변경 후 &quot;재계산&quot;을 실행해야 새 기준이 반영됩니다.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" disabled={reseeding} onClick={() => setReseedConfirmOpen(false)}>
+                취소
+              </Button>
+              <Button disabled={reseeding} onClick={handleReseedConfirm}>
+                {reseeding
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> 재등록 중...</>
+                  : "변경 및 기준표 재등록"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* 시스템 정보 */}
         <Card>

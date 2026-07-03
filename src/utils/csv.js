@@ -41,6 +41,16 @@ export const parseCsv = (text) =>
     .filter((l) => l.trim())
     .map(parseCsvLine);
 
+// parseCsv + 원본 파일 행 번호(1-base) 보존 — 오류 안내가 실제 파일 행을 가리키도록.
+// 빈 줄을 제외한 뒤의 인덱스로 "N행"을 계산하면 파일 중간 빈 줄만큼 어긋난다.
+export const parseCsvWithLines = (text) =>
+  String(text ?? "")
+    .replace(/^\uFEFF/, "") // UTF-8 BOM 제거
+    .split("\n")
+    .map((l, idx) => ({ line: idx + 1, raw: l.endsWith("\r") ? l.slice(0, -1) : l }))
+    .filter(({ raw }) => raw.trim())
+    .map(({ line, raw }) => ({ line, cells: parseCsvLine(raw) }));
+
 // CSV 문자열을 파일로 다운로드 (bom: Excel 한글 깨짐 방지용 UTF-8 BOM — 기본 포함)
 export const downloadCsv = (filename, content, { bom = true } = {}) => {
   const blob = new Blob([(bom ? "\uFEFF" : "") + content], { type: "text/csv;charset=utf-8;" });

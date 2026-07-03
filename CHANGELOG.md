@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.16.0] - 2026-07-03
+
+### ✨ Features (전수 리뷰 잔여 백로그 완결)
+- **설정에서 학교급 변경 지원** — 학교 정보 카드에 학교급 Select 추가. 변경 저장 시 확인 다이얼로그를 거쳐 grades_standard 기준표를 새 학교급 공식 기준으로 재시드(재시드 성공 후에만 학교급 저장 — 실패 시 기존 학교급 유지), 완료 후 "재계산" 안내
+- **기준표 시드 원자성 개선** — clear→PUT 순서를 PUT→잔행 clear로 교체. 중간 실패 시 기준표가 빈 채로 남던 창 제거(어느 단계에서 실패해도 완전한 기준표 유지, 잔행은 find 우선순위상 무해)
+- **측정 라우트 param 변경 시 강제 재마운트** — `/measure/:classId`(·`/:studentId`)에 key 부여. 학급→학급 직행 내비게이션에서 "프리필 1회" 가드가 리셋되지 않아 이전 학급 폼이 남는 잠재 결함 차단
+- **CSV 오류 행 번호 정확화** — `parseCsvWithLines`(원본 파일 행 번호 보존) 신규, 학생 CSV 업로드 오류 안내가 파일 중간 빈 줄이 있어도 실제 행을 가리키도록 수정
+
+### ✅ Tests
+- Vitest 327 → **339 케이스**: parseCsvWithLines(빈 줄·BOM·CRLF·행 번호), seedGradesStandard(PUT 선행·범위 산식·PUT 실패 시 clear 미호출·문자열 직렬화·미지원 학교급)
+
 ## [v0.15.0] - 2026-07-03
 
 ### ✨ Features

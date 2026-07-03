@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
 import { useSettingsStore } from "./store/settingsStore";
@@ -67,6 +67,17 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+// 측정 페이지는 param이 바뀌면 강제 재마운트 — "프리필 1회" 가드(initializedRef)가
+// 학급→학급/학생→학생 직행 내비게이션에서 리셋되지 않아 이전 대상의 폼이 남는 것을 방지
+function KeyedClassMeasure() {
+  const { classId } = useParams();
+  return <ClassMeasure key={classId} />;
+}
+function KeyedStudentMeasure() {
+  const { classId, studentId } = useParams();
+  return <StudentMeasure key={`${classId}/${studentId}`} />;
+}
+
 export default function App() {
   useTheme();
 
@@ -86,8 +97,8 @@ export default function App() {
               <Route path="/onboarding" element={<Onboarding />} />
               {/* Web App */}
               <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/measure/:classId" element={<ProtectedRoute><ClassMeasure /></ProtectedRoute>} />
-              <Route path="/measure/:classId/:studentId" element={<ProtectedRoute><StudentMeasure /></ProtectedRoute>} />
+              <Route path="/measure/:classId" element={<ProtectedRoute><KeyedClassMeasure /></ProtectedRoute>} />
+              <Route path="/measure/:classId/:studentId" element={<ProtectedRoute><KeyedStudentMeasure /></ProtectedRoute>} />
               <Route path="/students" element={<ProtectedRoute><Students /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               {/* Dashboard */}

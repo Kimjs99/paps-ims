@@ -21,19 +21,23 @@ export const seedGradesStandard = async (sheetId, schoolLevel) => {
   const header = ["grade_level", "gender", "item", "grade1_min", "grade2_min", "grade3_min", "grade4_min", "grade5_min", "higher_is_better"];
   const values = [header, ...rows.map((row) => row.map(String))];
 
-  // 기존 데이터 범위 clear — 행 수가 다른 기준표로 재시드할 때 잔행 방지 (예: 초등 56행 → 중·고 48행)
-  await withRetry(() =>
-    sheetsRequest({
-      method: "POST",
-      path: `/${sheetId}/values/${SHEET_NAMES.GRADES_STANDARD}!A1:I:clear`,
-    })
-  );
-
+  // 새 기준표 PUT → 잔행 clear 순서 유지 필수.
+  // clear→PUT 순서는 clear 후 PUT이 실패하면 기준표가 빈 채로 남아 모든 등급 계산이 멈춘다.
+  // PUT→clear 순서는 어느 단계에서 실패해도 완전한 기준표(기존 또는 신규)가 유지되고,
+  // clear 실패로 남은 잔행은 calcGrade의 find()가 상단(신규 데이터)을 먼저 매칭하므로 무해하다.
   await withRetry(() =>
     sheetsRequest({
       method: "PUT",
-      path: `/${sheetId}/values/${SHEET_NAMES.GRADES_STANDARD}!A1:I?valueInputOption=RAW`,
+      path: `/${sheetId}/values/${SHEET_NAMES.GRADES_STANDARD}!A1:I${values.length}?valueInputOption=RAW`,
       body: { values },
+    })
+  );
+
+  // 행 수가 다른 기준표로 재시드할 때 잔행 제거 (예: 초등 → 중·고)
+  await withRetry(() =>
+    sheetsRequest({
+      method: "POST",
+      path: `/${sheetId}/values/${SHEET_NAMES.GRADES_STANDARD}!A${values.length + 1}:I:clear`,
     })
   );
 };

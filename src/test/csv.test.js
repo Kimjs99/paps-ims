@@ -1,5 +1,45 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseCsvLine, parseCsv, downloadCsv } from '../utils/csv';
+import { parseCsvLine, parseCsv, parseCsvWithLines, downloadCsv } from '../utils/csv';
+
+describe('parseCsvWithLines (원본 행 번호 보존)', () => {
+  it('빈 줄이 없으면 인덱스와 행 번호 일치 (1-base)', () => {
+    expect(parseCsvWithLines('a,b\n1,2')).toEqual([
+      { line: 1, cells: ['a', 'b'] },
+      { line: 2, cells: ['1', '2'] },
+    ]);
+  });
+
+  it('파일 중간 빈 줄만큼 행 번호가 원본 기준으로 유지 — 오류 안내 어긋남 방지', () => {
+    // 3행이 빈 줄 → 데이터 두 번째 행은 원본 4행
+    const rows = parseCsvWithLines('h1,h2\n1,2\n\n3,4\n');
+    expect(rows).toEqual([
+      { line: 1, cells: ['h1', 'h2'] },
+      { line: 2, cells: ['1', '2'] },
+      { line: 4, cells: ['3', '4'] },
+    ]);
+  });
+
+  it('연속 빈 줄·공백만 있는 줄도 건너뛰되 번호 유지', () => {
+    const rows = parseCsvWithLines('h\n\n  \n\nx');
+    expect(rows).toEqual([
+      { line: 1, cells: ['h'] },
+      { line: 5, cells: ['x'] },
+    ]);
+  });
+
+  it('BOM 제거 + CRLF 처리 — parseCsv와 동일한 전처리', () => {
+    const rows = parseCsvWithLines('﻿a,b\r\n1,2\r\n');
+    expect(rows).toEqual([
+      { line: 1, cells: ['a', 'b'] },
+      { line: 2, cells: ['1', '2'] },
+    ]);
+  });
+
+  it('빈 입력/null은 빈 배열', () => {
+    expect(parseCsvWithLines('')).toEqual([]);
+    expect(parseCsvWithLines(null)).toEqual([]);
+  });
+});
 
 describe('parseCsvLine (따옴표 인식 한 줄 파싱)', () => {
   it('일반 쉼표 구분 — 기존 split(",").map(trim)과 동일', () => {
