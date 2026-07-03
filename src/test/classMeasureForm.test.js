@@ -72,7 +72,7 @@ describe('buildMeasurementRows (저장 행 구성)', () => {
       grade1_min: 80, grade2_min: 60, grade3_min: 40, grade4_min: 20, grade5_min: 0 },
   ];
   const types = { cardioType: 'shuttle_run', muscleType: 'sit_up', agilityType: 'sprint_50m' };
-  const meta = { schoolYear: 2026, teacherEmail: 'teacher@school.kr' };
+  const meta = { schoolYear: 2026, teacherEmail: 'teacher@school.kr', schoolLevel: '중학교' };
 
   it('폼 값 → 숫자 변환, 빈 문자열은 null, 종목/연도/교사 메타 포함', () => {
     const formValues = { 20240101: { height: '', weight: '', cardio_value: '65', muscle_value: '', flexibility_value: '', agility_value: '' } };
@@ -94,6 +94,7 @@ describe('buildMeasurementRows (저장 행 구성)', () => {
     expect(row.cardio_grade).toBe(2); // 60 <= 65 < 80
     expect(row.muscle_grade).toBeNull();
     expect(row.bmi).toBeCloseTo(50 / 1.6 / 1.6, 1); // 학생 레코드 키/몸무게 기준
+    expect(row.bmi_grade).toBe(1); // BMI 19.5 — 중1 여 공식 기준 정상(15.2~22.1)
   });
 
   it('폼에 키/몸무게 입력 시 학생 레코드 대신 폼 값으로 BMI 산출', () => {

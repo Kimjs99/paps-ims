@@ -33,5 +33,6 @@ export const useGradesStandard = () => {
 // 입력값 변경 시 실시간 등급 계산 — buildGrades 위임 (StudentMeasure 미리보기·저장 경로)
 export const useCalculateGrades = (formValues, student) => {
   const { data: gradesData } = useGradesStandard();
-  return buildGrades(formValues, student, gradesData);
+  const schoolLevel = useSettingsStore((s) => s.schoolLevel);
+  return buildGrades(formValues, student, gradesData, { schoolLevel });
 };

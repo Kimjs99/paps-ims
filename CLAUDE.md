@@ -157,7 +157,7 @@ VITE_SHEETS_TEMPLATE_ID — 공개 템플릿 Sheet ID (사본 만들기용)
 
 ## 유틸리티 (`src/utils/`)
 
-- `bmiCalc.js` — BMI 계산 및 등급 판정
+- `bmiCalc.js` — BMI 계산 및 등급 판정 — `BMI_STANDARDS_BY_LEVEL`(교육부 PAPS 공식 학년·성별 기준, 초4~고3) 기반. `calcBMIGrade(bmi, {schoolLevel, grade, gender})` — 기준 미제공 학년(초3)은 null. 등급: 1 정상/2 과체중/3 경도비만/4 마름/5 고도비만
 - `gradeCalc.js` — `calcGrade()`, `calcTotalGrade()`, `buildGrades()` — grades_standard 기반 등급 계산
 - `gradesStandardSeed.js` — 교육부 공식 PAPS 기준표 상수 (`GRADES_SEED_BY_LEVEL`, `SCHOOL_LEVELS`, `GRADE_RANGE_BY_LEVEL`) — 초등 3~6·중학 1~3·고등 1~3학년 × 성별 × 8종목
 - `validators.js` — Zod 스키마 기반 유효성 검사. `studentSchema`의 height/weight는 optional(`z.preprocess` 패턴). `measurementSchema`에도 height/weight 포함 — 측정 폼에서 입력 시 student 레코드 업데이트 용도

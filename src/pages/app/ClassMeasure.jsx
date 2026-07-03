@@ -20,7 +20,7 @@ export default function ClassMeasure() {
   const { classId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { schoolYear } = useSettingsStore();
+  const { schoolYear, schoolLevel } = useSettingsStore();
   const [grade, cls] = classId.split("-").map(Number);
 
   const { data: students = [], isLoading } = useStudents();
@@ -139,7 +139,7 @@ export default function ClassMeasure() {
       toBeSaved,
       formValues,
       { cardioType, muscleType, agilityType },
-      { schoolYear, teacherEmail: user?.email || "" },
+      { schoolYear, teacherEmail: user?.email || "", schoolLevel },
       gradesData
     );
 

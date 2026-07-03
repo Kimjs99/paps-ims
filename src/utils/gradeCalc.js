@@ -48,11 +48,17 @@ export const calcTotalGrade = (grades) => {
  * @param {object} [options]
  * @param {number|null} [options.bmi] 지정 시 height/weight로 재계산하지 않고 이 BMI를 사용
  *                                    (설정 → 재계산: 측정 당시 BMI 이력 보존용)
+ * @param {string} [options.schoolLevel] 초등학교/중학교/고등학교 — BMI 공식 기준표 조회용.
+ *                                       미지정 시 BMI 등급 미산출(null)
  */
 export const buildGrades = (formValues, student, gradesData, options = {}) => {
   if (!gradesData || !student) return null;
   const bmi = "bmi" in options ? options.bmi : calcBMI(student.height, student.weight);
-  const bmi_grade = calcBMIGrade(bmi);
+  const bmi_grade = calcBMIGrade(bmi, {
+    schoolLevel: options.schoolLevel,
+    grade: student.grade,
+    gender: student.gender,
+  });
 
   const cardio_grade = calcGrade(
     formValues.cardio_value, formValues.cardio_type,

@@ -114,7 +114,7 @@ export function ClassReportPreview({ measurements, students, schoolName, schoolY
           </tbody>
         </table>
         <p className="text-[11px] text-gray-400 -mt-4 mb-6">
-          ※ 비만(BMI) 등급은 참고치(성인 기준)로, PAPS 공식 학년·성별 기준과 다를 수 있습니다.
+          ※ 비만(BMI) 등급은 PAPS 공식 학년·성별 기준(교육부)을 적용합니다. 기준 미제공 학년(초등 3학년)은 등급이 산출되지 않습니다.
         </p>
 
         {/* 종합 등급 분포 */}

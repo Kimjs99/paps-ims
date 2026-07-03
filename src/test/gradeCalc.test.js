@@ -193,24 +193,31 @@ describe('buildGrades', () => {
     expect(buildGrades(formValues, student, null)).toBeNull();
   });
 
-  it('기본은 student height/weight로 BMI 계산', () => {
-    const result = buildGrades(formValues, student, gradesData);
-    // 65 / 1.7^2 = 22.49... → 22.5
+  it('기본은 student height/weight로 BMI 계산 (공식 기준: 중1 남 22.5 → 정상)', () => {
+    const result = buildGrades(formValues, student, gradesData, { schoolLevel: '중학교' });
+    // 65 / 1.7^2 = 22.49... → 22.5, 중1 남 정상 상한 23.2 이하
     expect(result.bmi).toBe(22.5);
-    expect(result.bmi_grade).toBe(1); // 23 미만 = 정상
+    expect(result.bmi_grade).toBe(1);
   });
 
   it('options.bmi 지정 시 재계산 없이 해당 BMI 사용 (재계산 이력 보존 경로)', () => {
-    const result = buildGrades(formValues, student, gradesData, { bmi: 17.2 });
-    expect(result.bmi).toBe(17.2);
-    expect(result.bmi_grade).toBe(4); // 저체중
+    const result = buildGrades(formValues, student, gradesData, { bmi: 15.0, schoolLevel: '중학교' });
+    expect(result.bmi).toBe(15.0);
+    expect(result.bmi_grade).toBe(4); // 중1 남 마름 상한 15.3 이하
   });
 
   it('options.bmi가 null이면 bmi_grade도 null (기준표 시드 전 저장 기록)', () => {
-    const result = buildGrades(formValues, student, gradesData, { bmi: null });
+    const result = buildGrades(formValues, student, gradesData, { bmi: null, schoolLevel: '중학교' });
     expect(result.bmi).toBeNull();
     expect(result.bmi_grade).toBeNull();
     // total_grade는 bmi 제외 4개 영역 평균
+    expect(result.total_grade).not.toBeNull();
+  });
+
+  it('schoolLevel 미지정 시 BMI 등급 미산출 — 종합등급은 나머지 영역으로 산출', () => {
+    const result = buildGrades(formValues, student, gradesData);
+    expect(result.bmi).toBe(22.5);
+    expect(result.bmi_grade).toBeNull();
     expect(result.total_grade).not.toBeNull();
   });
 });

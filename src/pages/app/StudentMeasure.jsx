@@ -344,7 +344,9 @@ export default function StudentMeasure() {
                 </p>
               )}
               <p className="text-[11px] text-gray-400">
-                ※ BMI 등급은 참고치(성인 기준)입니다. PAPS 공식 학년·성별 기준과 다를 수 있습니다.
+                ※ BMI 등급은 PAPS 공식 학년·성별 기준(교육부)을 적용합니다.
+                {grades?.bmi != null && grades?.bmi_grade == null &&
+                  " 이 학년은 공식 기준 미제공으로 BMI 등급을 산출하지 않습니다."}
               </p>
             </CardContent>
           </Card>

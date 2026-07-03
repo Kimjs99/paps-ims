@@ -24,7 +24,7 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const {
-    sheetId, schoolName, schoolYear, teacherName,
+    sheetId, schoolName, schoolYear, teacherName, schoolLevel,
     setSheetId, setSchoolInfo,
   } = useSettingsStore();
   const handleLogout = useLogout();
@@ -121,7 +121,7 @@ export default function Settings() {
         // 측정 당시 BMI 이력 보존 — 현재 체격으로 재계산해 덮어쓰지 않는다 (options.bmi로 고정 전달)
         // 측정 당시 학년(v1.1)이 있으면 그 학년 기준표로 재계산 — 구 데이터는 현재 학년 폴백
         const gradeAtMeasure = m.measured_grade ?? student.grade;
-        const grades = buildGrades(m, { ...student, grade: gradeAtMeasure }, gradesData, { bmi: m.bmi });
+        const grades = buildGrades(m, { ...student, grade: gradeAtMeasure }, gradesData, { bmi: m.bmi, schoolLevel });
 
         // 변경이 있는 행만 업데이트
         if (

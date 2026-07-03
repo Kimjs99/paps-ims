@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.15.0] - 2026-07-03
+
+### ✨ Features
+- **BMI 공식 학년·성별 기준 적용** — 성인 기준(18.5/23/25/30) 하드코딩을 교육부 PAPS 도움자료의 학년별(초4~고3)·성별 판정표로 교체. `BMI_STANDARDS_BY_LEVEL` 상수(`utils/bmiCalc.js`) + `calcBMIGrade(bmi, {schoolLevel, grade, gender})`. 등급 매핑은 기존 유지: 1 정상 / 2 과체중 / 3 경도비만 / 4 마름 / 5 고도비만
+  - 남 고2·고3은 공식표에 과체중 구간 없음(25.0~29.9 전체가 경도비만) — 정상 상한=과체중 상한(24.9)으로 인코딩
+  - 초등 3학년은 공식 기준 미제공 → BMI 등급 미산출(null), 종합등급은 나머지 4개 영역 평균
+  - `buildGrades(options.schoolLevel)` 배선: 측정 미리보기(useCalculateGrades)·학급 저장(buildMeasurementRows)·설정 재계산 3경로. 기존 측정 기록은 설정 → 재계산으로 일괄 갱신
+- **각주 교체** — 측정 미리보기·학급 보고서의 "참고치(성인 기준)" 각주를 공식 기준 적용 안내로 교체(기준 미제공 학년 안내 포함)
+
+### ✅ Tests
+- BMI 경계값(중1 남 8구간·초4 여·남 고2/고3 병합 구간·고3 여), 초3 null, 기준표 무결성(단조성·29.9 상한·18항목 커버리지), buildGrades schoolLevel 배선
+
 ## [v0.14.0] - 2026-07-03
 
 ### ✨ Features (정책 백로그 배치)

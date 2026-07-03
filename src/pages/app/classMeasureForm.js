@@ -48,7 +48,7 @@ export const buildMeasurementRows = (
   toBeSaved,
   formValues,
   { cardioType, muscleType, agilityType },
-  { schoolYear, teacherEmail },
+  { schoolYear, teacherEmail, schoolLevel },
   gradesData
 ) =>
   toBeSaved.map((student) => {
@@ -67,7 +67,8 @@ export const buildMeasurementRows = (
         agility_type: agilityType, agility_value,
       },
       { ...student, height, weight },
-      gradesData
+      gradesData,
+      { schoolLevel }
     );
     return {
       measurement_id: uuidv4(),
