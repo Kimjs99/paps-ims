@@ -50,7 +50,7 @@ describe.each(SCHOOL_LEVELS)('GRADES_SEED_BY_LEVEL — %s', (level) => {
   it(`학년 커버리지가 기대 범위와 일치한다 (${EXPECTED_SEED_GRADES[level].join(',')}학년)`, () => {
     const grades = [...new Set(rows.map((r) => r.grade_level))].sort((a, b) => a - b);
     expect(grades).toEqual(EXPECTED_SEED_GRADES[level]);
-    // 초등 시드 학년은 GRADE_RANGE_BY_LEVEL(1~6)의 부분집합이어야 한다
+    // 초등 시드 학년은 GRADE_RANGE_BY_LEVEL(3~6)의 부분집합이어야 한다
     grades.forEach((g) => expect(GRADE_RANGE_BY_LEVEL[level]).toContain(g));
   });
 

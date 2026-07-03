@@ -112,4 +112,10 @@ describe('buildMeasurementRows (저장 행 구성)', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].measurement_id).not.toBe(rows[1].measurement_id);
   });
+
+  it('measured_grade에 측정 당시 학년 기록 (스키마 v1.1)', () => {
+    const formValues = { 20240101: { height: '', weight: '', cardio_value: '65', muscle_value: '', flexibility_value: '', agility_value: '' } };
+    const [row] = buildMeasurementRows([student], formValues, types, meta, gradesData);
+    expect(row.measured_grade).toBe(student.grade);
+  });
 });

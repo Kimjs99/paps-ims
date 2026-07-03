@@ -26,6 +26,8 @@ const rowToMeasurement = (row) => ({
   total_grade: toNumOrNull(row[16]),
   measured_at: row[17] || "",
   teacher_email: row[18] || "",
+  // v1.1: 측정 당시 학년 — 구 데이터(컬럼 없음)는 null (재계산 시 현재 학년으로 폴백)
+  measured_grade: toNumOrNull(row[19]),
 });
 
 // 측정 객체 → 행 배열 변환
@@ -38,12 +40,13 @@ const measurementToRow = (m) => [
   m.bmi ?? "", m.bmi_grade ?? "", m.total_grade ?? "",
   m.measured_at || nowKST(),
   m.teacher_email || "",
+  m.measured_grade ?? "",
 ];
 
 // 전체 측정 데이터 조회
 export const getMeasurements = async (sheetId) => {
   const data = await withRetry(() =>
-    sheetsRequest({ path: `/${sheetId}/values/${SHEET_NAMES.MEASUREMENTS}!A2:S` })
+    sheetsRequest({ path: `/${sheetId}/values/${SHEET_NAMES.MEASUREMENTS}!A2:T` })
   );
   const rows = data.values || [];
   return rows.map(rowToMeasurement);
@@ -54,7 +57,7 @@ export const saveMeasurement = async (sheetId, measurement) => {
   await withRetry(() =>
     sheetsRequest({
       method: "POST",
-      path: `/${sheetId}/values/${SHEET_NAMES.MEASUREMENTS}!A:S:append?valueInputOption=RAW`,
+      path: `/${sheetId}/values/${SHEET_NAMES.MEASUREMENTS}!A:T:append?valueInputOption=RAW`,
       body: { values: [measurementToRow(measurement)] },
     })
   );
@@ -72,7 +75,7 @@ export const batchUpdateMeasurementGrades = async (sheetId, items) => {
   if (hasMismatch) throw rowMismatchError();
 
   const data = items.map(({ rowIndex, measurement }) => ({
-    range: `${SHEET_NAMES.MEASUREMENTS}!A${rowIndex + 2}:S${rowIndex + 2}`,
+    range: `${SHEET_NAMES.MEASUREMENTS}!A${rowIndex + 2}:T${rowIndex + 2}`,
     values: [measurementToRow(measurement)],
   }));
   await withRetry(() =>
@@ -90,7 +93,7 @@ export const saveMeasurementsBatch = async (sheetId, measurements) => {
   await withRetry(() =>
     sheetsRequest({
       method: "POST",
-      path: `/${sheetId}/values/${SHEET_NAMES.MEASUREMENTS}!A:S:append?valueInputOption=RAW`,
+      path: `/${sheetId}/values/${SHEET_NAMES.MEASUREMENTS}!A:T:append?valueInputOption=RAW`,
       body: { values },
     })
   );

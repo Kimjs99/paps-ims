@@ -11,7 +11,7 @@ import { sheetsRequest } from '../api/sheetsClient';
 
 const SHEET_ID = 'test_sheet_id';
 
-// 19컬럼 측정 행 mock
+// 20컬럼 측정 행 mock (스키마 v1.1: measured_grade 포함)
 const mockMeasRow = [
   'M001',        // measurement_id
   'S001',        // student_id
@@ -32,6 +32,7 @@ const mockMeasRow = [
   '1',           // total_grade
   '2024-01-15T09:00:00.000Z', // measured_at
   'teacher@example.com',       // teacher_email
+  '2',                         // measured_grade (v1.1: 측정 당시 학년)
 ];
 
 const expectedMeasurement = {
@@ -54,6 +55,7 @@ const expectedMeasurement = {
   total_grade: 1,
   measured_at: '2024-01-15T09:00:00.000Z',
   teacher_email: 'teacher@example.com',
+  measured_grade: 2,
 };
 
 describe('getMeasurements', () => {
@@ -70,6 +72,14 @@ describe('getMeasurements', () => {
     sheetsRequest.mockResolvedValueOnce({});
     const result = await getMeasurements(SHEET_ID);
     expect(result).toEqual([]);
+  });
+
+  it('구 19컬럼 행(스키마 1.0)은 measured_grade null — 하위호환 계약', async () => {
+    const legacyRow = mockMeasRow.slice(0, 19); // T열(measured_grade) 없는 구 데이터
+    sheetsRequest.mockResolvedValueOnce({ values: [legacyRow] });
+    const [result] = await getMeasurements(SHEET_ID);
+    expect(result.measured_grade).toBeNull();
+    expect(result.teacher_email).toBe('teacher@example.com');
   });
 
   it('빈 문자열 숫자 필드는 null로 변환', async () => {
@@ -184,7 +194,7 @@ describe('batchUpdateMeasurementGrades', () => {
     const writeCall = sheetsRequest.mock.calls[1][0];
     expect(writeCall.path).toContain('values:batchUpdate');
     expect(writeCall.body.data).toHaveLength(2);
-    expect(writeCall.body.data[0].range).toContain('A2:S2');
+    expect(writeCall.body.data[0].range).toContain('A2:T2');
   });
 
   it('key 불일치(행 밀림) 시 ROW_MISMATCH throw + 쓰기 미호출', async () => {

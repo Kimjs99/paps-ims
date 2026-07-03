@@ -53,7 +53,7 @@ export const GRADE_LABELS = {
 };
 
 // Sheets 스키마 버전
-export const SCHEMA_VERSION = "1.0";
+export const SCHEMA_VERSION = "1.1";
 
 // Sheets 시트명
 export const SHEET_NAMES = {

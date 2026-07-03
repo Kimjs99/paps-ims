@@ -16,6 +16,7 @@ import { cn } from "../../lib/utils";
 import { LastUpdatedBar } from "../dashboard/LastUpdatedBar";
 import { PollingIndicator } from "../dashboard/PollingIndicator";
 import { AuthExpiredBanner } from "./AuthExpiredBanner";
+import { SchemaMigrationBanner } from "./SchemaMigrationBanner";
 import { ThemeToggle } from "./ThemeToggle";
 
 const sidebarItems = [
@@ -104,6 +105,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
 
       {/* 세션 만료 재인증 배너 */}
       <AuthExpiredBanner />
+      <SchemaMigrationBanner />
 
       <div className="flex flex-1">
         {/* 데스크톱 사이드바 */}

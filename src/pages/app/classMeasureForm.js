@@ -79,5 +79,6 @@ export const buildMeasurementRows = (
       agility_type: agilityType, agility_value,
       ...grades,
       teacher_email: teacherEmail,
+      measured_grade: student.grade, // 측정 당시 학년 (스키마 v1.1 — 과거 연도 재계산 시 기준)
     };
   });

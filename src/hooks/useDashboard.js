@@ -146,7 +146,7 @@ export const useDashboardData = (filters = {}) => {
   const schoolLevel = useSettingsStore((s) => s.schoolLevel);
 
   const gradeProgress = useMemo(() => {
-    // 학교급별 학년 범위 (초등 1~6, 중·고 1~3)
+    // 학교급별 학년 범위 (초등 3~6, 중·고 1~3)
     const gradeRange = GRADE_RANGE_BY_LEVEL[schoolLevel] || GRADE_RANGE_BY_LEVEL["중학교"];
     return gradeRange.map((g) => {
       const gradeStudents = activeStudents.filter((s) => Number(s.grade) === g);

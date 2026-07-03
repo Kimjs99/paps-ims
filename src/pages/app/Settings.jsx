@@ -5,7 +5,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useLogout } from "../../hooks/useLogout";
 import { sheetsRequest } from "../../api/sheetsClient";
-import { checkSchemaVersion } from "../../api/settings";
+import { checkSchemaCompat } from "../../api/settings";
 import { useSchemaCheck } from "../../hooks/useSchemaCheck";
 import { SCHEMA_VERSION, SHEET_NAMES } from "../../constants/paps";
 import { AppLayout } from "../../components/layout/AppLayout";
@@ -50,16 +50,24 @@ export default function Settings() {
     if (!id) return;
     setTestState("testing");
     try {
-      const ok = await checkSchemaVersion(id);
-      if (ok) {
+      // 구버전 시트도 연결 허용 — 연결 후 마이그레이션 배너에서 업그레이드
+      const { status, sheetVersion } = await checkSchemaCompat(id);
+      if (status === "ok" || status === "migratable") {
         setTestState("ok");
-        setTestMsg("연동 성공 — 스키마 버전 일치");
+        setTestMsg(
+          status === "ok"
+            ? "연동 성공 — 스키마 버전 일치"
+            : `연동 성공 — 스키마 ${sheetVersion} 구버전 (상단 배너에서 업그레이드 필요)`
+        );
         setSheetId(id);
         queryClient.invalidateQueries({ queryKey: ["grades_standard"] });
         toast.success("Sheet 연동이 업데이트됐습니다.");
+      } else if (status === "unsupported") {
+        setTestState("error");
+        setTestMsg(`이 시트는 더 새로운 스키마(${sheetVersion})입니다 — 앱 업데이트 필요`);
       } else {
         setTestState("error");
-        setTestMsg("스키마 버전 불일치 또는 올바르지 않은 템플릿");
+        setTestMsg("올바른 PAPS-IMS 템플릿이 아닙니다");
       }
     } catch {
       setTestState("error");
@@ -111,7 +119,9 @@ export default function Settings() {
         if (!student) return;
 
         // 측정 당시 BMI 이력 보존 — 현재 체격으로 재계산해 덮어쓰지 않는다 (options.bmi로 고정 전달)
-        const grades = buildGrades(m, student, gradesData, { bmi: m.bmi });
+        // 측정 당시 학년(v1.1)이 있으면 그 학년 기준표로 재계산 — 구 데이터는 현재 학년 폴백
+        const gradeAtMeasure = m.measured_grade ?? student.grade;
+        const grades = buildGrades(m, { ...student, grade: gradeAtMeasure }, gradesData, { bmi: m.bmi });
 
         // 변경이 있는 행만 업데이트
         if (

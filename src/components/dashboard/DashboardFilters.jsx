@@ -1,4 +1,6 @@
 import { useSearchParams } from "react-router-dom";
+import { useSettingsStore } from "../../store/settingsStore";
+import { GRADE_RANGE_BY_LEVEL } from "../../utils/gradesStandardSeed";
 
 const SelectField = ({ label, value, onChange, options, placeholder = "전체" }) => (
   <div className="flex items-center gap-2">
@@ -20,6 +22,7 @@ const SelectField = ({ label, value, onChange, options, placeholder = "전체" }
 
 export function DashboardFilters({ availableYears = [], availableClasses = [] }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const schoolLevel = useSettingsStore((st) => st.schoolLevel);
 
   const filters = {
     year: searchParams.get("year") || null,
@@ -41,7 +44,9 @@ export function DashboardFilters({ availableYears = [], availableClasses = [] })
   const hasFilter = Object.values(filters).some(Boolean);
 
   const yearOptions = availableYears.map((y) => ({ value: String(y), label: `${y}년` }));
-  const gradeOptions = [1, 2, 3].map((g) => ({ value: String(g), label: `${g}학년` }));
+  // 학교급별 학년 범위 (초등 3~6, 중·고 1~3) — [1,2,3] 하드코딩이면 초등 4~6학년 필터 불가
+  const gradeRange = GRADE_RANGE_BY_LEVEL[schoolLevel] || GRADE_RANGE_BY_LEVEL["중학교"];
+  const gradeOptions = gradeRange.map((g) => ({ value: String(g), label: `${g}학년` }));
   const classOptions = availableClasses.map((c) => ({ value: String(c), label: `${c}반` }));
   const genderOptions = [
     { value: "M", label: "남" },

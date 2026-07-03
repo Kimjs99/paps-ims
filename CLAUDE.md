@@ -91,7 +91,7 @@ ClassReportPreview / PersonalGrowthCard
 - **`settings` 시트 A열 키값 영문 고정**: `SCHEMA_VERSION`, `school_name`, `school_year`, `teacher_name`
 - **컬럼 순서 변경 금지**: `students`·`measurements` 시트는 인덱스 기반 파싱
 - **`students` 컬럼 순서** (9개): 학번, 이름, 성별, 학년, 반, 키(cm), 몸무게(kg), 등록일시, 활성여부 — `birth_date` 없음. 키/몸무게는 선택값으로 빈 문자열 허용, `rowToStudent`에서 `undefined` 반환(0 아님)
-- **`measurements` 컬럼 순서** (19개): measurement_id, student_id, year, cardio_type/value/grade, muscle_type/value/grade, flexibility_value/grade, agility_type/value/grade, bmi, bmi_grade, total_grade, measured_at, teacher_email
+- **`measurements` 컬럼 순서** (20개, 스키마 v1.1): measurement_id, student_id, year, cardio_type/value/grade, muscle_type/value/grade, flexibility_value/grade, agility_type/value/grade, bmi, bmi_grade, total_grade, measured_at, teacher_email, measured_grade(측정 당시 학년 — v1.1 마이그레이션으로 T열 추가, 구 데이터는 null이며 재계산 시 현재 학년 폴백)
 - **UUID는 클라이언트에서 생성**: `uuid` 라이브러리 사용
 - **측정일시는 KST 저장**: `nowKST()` (`src/api/sheetsClient.js`) 사용 — `new Date().toISOString()` 직접 사용 금지 (UTC 저장됨)
 

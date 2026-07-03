@@ -103,7 +103,7 @@ export default function Students() {
   const [deleteTarget, setDeleteTarget] = useState(null); // {student, rowIndex}
   const [classDeleteConfirm, setClassDeleteConfirm] = useState(false);
 
-  // 학교급 기준 학생 스키마·학년 옵션 (초등 1~6, 중·고 1~3)
+  // 학교급 기준 학생 스키마·학년 옵션 (초등 3~6, 중·고 1~3)
   const studentSchema = useMemo(() => makeStudentSchema(schoolLevel), [schoolLevel]);
   const gradeOptions = GRADE_RANGE_BY_LEVEL[schoolLevel] || GRADE_RANGE_BY_LEVEL["중학교"];
 

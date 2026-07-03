@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getSettings, checkSchemaVersion, saveSettings } from '../api/settings';
+import { getSettings, checkSchemaVersion, checkSchemaCompat, saveSettings } from '../api/settings';
 
 vi.mock('../api/sheetsClient', () => ({
   sheetsRequest: vi.fn(),
@@ -39,7 +39,7 @@ describe('checkSchemaVersion', () => {
 
   it('SCHEMA_VERSION이 현재 버전과 일치하면 true', async () => {
     sheetsRequest.mockResolvedValueOnce({
-      values: [['SCHEMA_VERSION', '1.0']],
+      values: [['SCHEMA_VERSION', '1.1']],
     });
     const result = await checkSchemaVersion(SHEET_ID);
     expect(result).toBe(true);
@@ -59,6 +59,30 @@ describe('checkSchemaVersion', () => {
     });
     const result = await checkSchemaVersion(SHEET_ID);
     expect(result).toBe(false);
+  });
+});
+
+describe('checkSchemaCompat (구버전 시트 연결 허용)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('일치하면 ok', async () => {
+    sheetsRequest.mockResolvedValueOnce({ values: [['SCHEMA_VERSION', '1.1']] });
+    expect(await checkSchemaCompat(SHEET_ID)).toEqual({ status: 'ok', sheetVersion: '1.1' });
+  });
+
+  it('구버전(1.0)이면 migratable — 온보딩/연동을 막지 않는다', async () => {
+    sheetsRequest.mockResolvedValueOnce({ values: [['SCHEMA_VERSION', '1.0']] });
+    expect(await checkSchemaCompat(SHEET_ID)).toEqual({ status: 'migratable', sheetVersion: '1.0' });
+  });
+
+  it('앱보다 신버전이면 unsupported', async () => {
+    sheetsRequest.mockResolvedValueOnce({ values: [['SCHEMA_VERSION', '2.0']] });
+    expect(await checkSchemaCompat(SHEET_ID)).toEqual({ status: 'unsupported', sheetVersion: '2.0' });
+  });
+
+  it('SCHEMA_VERSION 키가 없으면 invalid', async () => {
+    sheetsRequest.mockResolvedValueOnce({ values: [['school_name', '학교']] });
+    expect(await checkSchemaCompat(SHEET_ID)).toEqual({ status: 'invalid', sheetVersion: null });
   });
 });
 

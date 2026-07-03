@@ -113,6 +113,7 @@ export default function StudentMeasure() {
       ...(grades || {}),
       bmi,
       teacher_email: user?.email || "",
+      measured_grade: student.grade, // 측정 당시 학년 (스키마 v1.1)
     };
     try {
       // 키/몸무게가 변경된 경우 학생 정보 업데이트
@@ -342,6 +343,9 @@ export default function StudentMeasure() {
                   {GRADE_LABELS[grades.total_grade]}
                 </p>
               )}
+              <p className="text-[11px] text-gray-400">
+                ※ BMI 등급은 참고치(성인 기준)입니다. PAPS 공식 학년·성별 기준과 다를 수 있습니다.
+              </p>
             </CardContent>
           </Card>
         </div>

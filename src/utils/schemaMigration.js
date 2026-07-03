@@ -29,14 +29,13 @@ export const runMigrations = async (sheetId, fromVersion, toVersion) => {
 
 // 마이그레이션 단계 목록 (버전 순서대로)
 const MIGRATION_STEPS = [
-  // 예시: v1.0 → v1.1 마이그레이션 (추후 추가)
-  // {
-  //   version: "1.1",
-  //   description: "measurements 시트에 notes 컬럼 추가",
-  //   up: async (sheetId) => {
-  //     await addColumnHeader(sheetId, "measurements", "T", "notes");
-  //   },
-  // },
+  {
+    version: "1.1",
+    description: "measurements 시트에 measured_grade(측정 당시 학년) 컬럼 추가",
+    up: async (sheetId) => {
+      await addColumnHeader(sheetId, "measurements", "T", "measured_grade");
+    },
+  },
 ];
 
 // fromVersion 이후의 마이그레이션만 반환

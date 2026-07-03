@@ -215,9 +215,9 @@ export const GRADES_SEED_BY_LEVEL = {
 
 export const SCHOOL_LEVELS = ["초등학교", "중학교", "고등학교"];
 
-// school_level에 따른 학생 학년 범위
+// school_level에 따른 학생 학년 범위 (PAPS 기준표 존재 학년만 — 초등 1~2학년은 평가 대상 아님)
 export const GRADE_RANGE_BY_LEVEL = {
-  초등학교: [1, 2, 3, 4, 5, 6],
+  초등학교: [3, 4, 5, 6],
   중학교: [1, 2, 3],
   고등학교: [1, 2, 3],
 };

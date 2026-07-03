@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { studentSchema, measurementSchema } from '../utils/validators';
+import { studentSchema, makeStudentSchema, measurementSchema } from '../utils/validators';
 
 // Zod v4에서 parse 실패 시 ZodError throw
 const parseResult = (schema, data) => {
@@ -107,6 +107,14 @@ describe('studentSchema', () => {
 
   it('grade 경계값 3 → 성공', () => {
     expect(parseResult(studentSchema, { ...validStudent, grade: 3 }).success).toBe(true);
+  });
+
+  it('초등학교 스키마: 3~6학년만 허용 (PAPS 기준표 존재 학년 — 1~2학년 등록 불가)', () => {
+    const elementary = makeStudentSchema('초등학교');
+    expect(parseResult(elementary, { ...validStudent, grade: 2 }).success).toBe(false);
+    expect(parseResult(elementary, { ...validStudent, grade: 3 }).success).toBe(true);
+    expect(parseResult(elementary, { ...validStudent, grade: 6 }).success).toBe(true);
+    expect(parseResult(elementary, { ...validStudent, grade: 7 }).success).toBe(false);
   });
 
   it('height 경계값 100 → 성공', () => {

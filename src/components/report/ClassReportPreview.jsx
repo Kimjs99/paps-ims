@@ -113,6 +113,9 @@ export function ClassReportPreview({ measurements, students, schoolName, schoolY
             ))}
           </tbody>
         </table>
+        <p className="text-[11px] text-gray-400 -mt-4 mb-6">
+          ※ 비만(BMI) 등급은 참고치(성인 기준)로, PAPS 공식 학년·성별 기준과 다를 수 있습니다.
+        </p>
 
         {/* 종합 등급 분포 */}
         <h2 className="text-base font-semibold text-gray-700 mb-3">종합 등급 분포</h2>

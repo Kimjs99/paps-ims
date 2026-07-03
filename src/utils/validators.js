@@ -10,9 +10,10 @@ const optionalWeight = z.preprocess(
   z.number().min(20, "20kg 이상").max(150, "150kg 이하").optional()
 );
 
-// 학교급별 학생 스키마 팩토리 — 초등 1~6학년, 중·고 1~3학년
+// 학교급별 학생 스키마 팩토리 — 초등 3~6학년(PAPS 기준표 존재 학년), 중·고 1~3학년
 export const makeStudentSchema = (schoolLevel) => {
   const gradeRange = GRADE_RANGE_BY_LEVEL[schoolLevel] || GRADE_RANGE_BY_LEVEL["중학교"];
+  const minGrade = gradeRange[0];
   const maxGrade = gradeRange[gradeRange.length - 1];
   return z.object({
     student_id: z.string().min(1, "학번을 입력하세요"),
@@ -21,7 +22,7 @@ export const makeStudentSchema = (schoolLevel) => {
     grade: z.coerce
       .number()
       .int()
-      .min(1, "1학년 이상")
+      .min(minGrade, `${minGrade}학년 이상`)
       .max(maxGrade, `${maxGrade}학년 이하`),
     class: z.coerce.number().int().min(1).max(20),
     height: optionalHeight,

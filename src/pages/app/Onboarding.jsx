@@ -12,7 +12,7 @@ import { Progress } from "../../components/ui/progress";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { initGoogleAuth, requestAccessToken } from "../../api/sheetsClient";
-import { getSettings, checkSchemaVersion } from "../../api/settings";
+import { checkSchemaCompat } from "../../api/settings";
 import { isGradesStandardEmpty, seedGradesStandard } from "../../api/gradesStandard";
 import { SCHOOL_LEVELS } from "../../utils/gradesStandardSeed";
 import { SCHEMA_VERSION } from "../../constants/paps";
@@ -100,21 +100,22 @@ export default function Onboarding() {
     setError("");
     setTestResult(null);
     try {
-      const isVersionOk = await checkSchemaVersion(extracted);
-      if (isVersionOk) {
+      // 구버전 시트도 연결 허용 — 온보딩 완료 후 마이그레이션 배너에서 업그레이드
+      const { status, sheetVersion } = await checkSchemaCompat(extracted);
+      if (status === "ok") {
         setTestResult("success");
         setTestMessage("연동 성공! 스키마 버전이 일치합니다.");
-        // 검증 성공 시에만 Sheet ID 저장
         setSheetId(extracted);
+      } else if (status === "migratable") {
+        setTestResult("success");
+        setTestMessage(`연동 성공! (스키마 ${sheetVersion} → ${SCHEMA_VERSION} 업그레이드 필요 — 시작 후 상단 배너에서 진행)`);
+        setSheetId(extracted);
+      } else if (status === "unsupported") {
+        setTestResult("error");
+        setTestMessage(`이 시트는 더 새로운 스키마(${sheetVersion})입니다. 앱을 최신 버전으로 사용해주세요. (앱: ${SCHEMA_VERSION})`);
       } else {
-        const settings = await getSettings(extracted);
-        if (settings["SCHEMA_VERSION"]) {
-          setTestResult("error");
-          setTestMessage(`스키마 버전 불일치: ${settings["SCHEMA_VERSION"]} (필요: ${SCHEMA_VERSION})`);
-        } else {
-          setTestResult("error");
-          setTestMessage("올바른 PAPS-IMS 템플릿 Sheet가 아닙니다.");
-        }
+        setTestResult("error");
+        setTestMessage("올바른 PAPS-IMS 템플릿 Sheet가 아닙니다.");
       }
     } catch {
       setTestResult("error");
