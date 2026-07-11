@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.17.0] - 2026-07-11
+
+### ✨ Features
+- **학생 CSV 성별 남/여 자동 변환** — `normalizeGender()` 신규: 기록시트지 표기(남/남자/여/여자)와 M/F(대소문자)·male/female·W를 모두 인식해 M/F로 정규화. 학생 템플릿 예시도 남/여로 교체
+- **CSV 업로드 인코딩 자동 감지** — `readCsvFile()` 신규: UTF-8 엄격 디코딩 실패 시 EUC-KR(CP949) 폴백. Excel "CSV(쉼표로 분리)" 저장 파일의 한글 깨짐 해소 (학생·측정 CSV 업로드 공통 적용)
+- **폰트 자체 호스팅** — Pretendard·Inter 가변 폰트(woff2, weight 전 범위)를 `public/fonts`에 내장하고 CDN 링크 제거. 학교망 CDN 차단·오프라인에서도 한글 렌더링·PDF 출력 보장
+
+### 🐛 Bug Fixes
+- **성별 "여" 오등록 수정** — 학생 CSV 업로드가 "F" 외 모든 값을 남(M)으로 저장하던 버그. 인식 불가 값은 남으로 저장되는 대신 행 단위 검증 오류로 안내
+- **학생 템플릿 한글 깨짐** — BOM 없이 다운로드되어 Excel에서 한글이 깨지던 문제. UTF-8 BOM 포함으로 변경
+
+### ✅ Tests
+- Vitest 339 → **346 케이스**: normalizeGender(남/여·공백·인식 불가), readCsvFile(UTF-8·BOM·EUC-KR 폴백)
+
 ## [v0.16.0] - 2026-07-03
 
 ### ✨ Features (전수 리뷰 잔여 백로그 완결)

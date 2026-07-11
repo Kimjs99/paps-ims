@@ -20,7 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
-import { parseCsvWithLines, downloadCsv } from "../../utils/csv";
+import { parseCsvWithLines, downloadCsv, normalizeGender, readCsvFile } from "../../utils/csv";
 
 function StudentForm({ onSubmit, isLoading, schema, gradeOptions }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
@@ -139,54 +139,59 @@ export default function Students() {
 
   // CSV 파싱: student_id,name,gender,grade,class,height,weight
   // 행별 Zod 검증 — 실패 행은 제외하고 사유를 목록으로 안내
-  const handleCsvFile = (e) => {
+  const handleCsvFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const rows = parseCsvWithLines(ev.target.result);
-      const valid = [];
-      const errors = [];
-      rows.slice(1).forEach(({ line, cells: cols }) => {
-        const [student_id, name, gender, grade, cls, height, weight] = cols;
-        const result = studentSchema.safeParse({
-          student_id: student_id ?? "",
-          name: name ?? "",
-          gender: gender?.toUpperCase() === "F" ? "F" : "M",
-          grade: grade ?? "",
-          class: cls ?? "",
-          // 빈 값은 undefined로 검증 (0 저장 금지)
-          height: height ?? "",
-          weight: weight ?? "",
-        });
-        if (result.success) {
-          valid.push(result.data);
-        } else {
-          const reasons = result.error.issues.map((iss) => iss.message).join(", ");
-          errors.push(`${line}행: ${reasons}`); // 원본 파일 행 번호 (빈 줄 포함 기준)
-        }
-      });
-      setCsvPreview(valid.length > 0 ? valid : null);
-      setCsvErrors(errors);
-      if (errors.length > 0) {
-        toast.error(`CSV ${errors.length}행 검증 실패 — 해당 행은 제외됩니다.`);
-      }
-      if (valid.length === 0 && errors.length === 0) {
-        toast.error("CSV에서 등록할 학생을 찾지 못했습니다.");
-      }
-    };
-    reader.readAsText(file);
     e.target.value = "";
+    // Excel CP949 저장 파일 대응 — UTF-8 실패 시 EUC-KR 폴백
+    const text = await readCsvFile(file);
+    const rows = parseCsvWithLines(text);
+    const valid = [];
+    const errors = [];
+    rows.slice(1).forEach(({ line, cells: cols }) => {
+      const [student_id, name, gender, grade, cls, height, weight] = cols;
+      // 기록시트지 표기(남/여) 자동 변환 — 인식 불가 값은 행 단위 오류로 안내
+      const normalizedGender = normalizeGender(gender);
+      if (gender && !normalizedGender) {
+        errors.push(`${line}행: 성별 "${gender}"을(를) 인식할 수 없습니다 (남/여 또는 M/F로 입력)`);
+        return;
+      }
+      const result = studentSchema.safeParse({
+        student_id: student_id ?? "",
+        name: name ?? "",
+        gender: normalizedGender ?? "",
+        grade: grade ?? "",
+        class: cls ?? "",
+        // 빈 값은 undefined로 검증 (0 저장 금지)
+        height: height ?? "",
+        weight: weight ?? "",
+      });
+      if (result.success) {
+        valid.push(result.data);
+      } else {
+        const reasons = result.error.issues.map((iss) => iss.message).join(", ");
+        errors.push(`${line}행: ${reasons}`); // 원본 파일 행 번호 (빈 줄 포함 기준)
+      }
+    });
+    setCsvPreview(valid.length > 0 ? valid : null);
+    setCsvErrors(errors);
+    if (errors.length > 0) {
+      toast.error(`CSV ${errors.length}행 검증 실패 — 해당 행은 제외됩니다.`);
+    }
+    if (valid.length === 0 && errors.length === 0) {
+      toast.error("CSV에서 등록할 학생을 찾지 못했습니다.");
+    }
   };
 
   const handleCsvTemplateDownload = () => {
+    // 기록시트지 표기(남/여) 그대로 붙여넣을 수 있도록 예시도 남/여 사용 (M/F도 업로드 시 인식됨)
     const header = "student_id,name,gender,grade,class,height,weight";
     const examples = [
-      "20240101,홍길동,M,1,1,165,58",
-      "20240102,김영희,F,1,1,158,52",
+      "20240101,홍길동,남,1,1,165,58",
+      "20240102,김영희,여,1,1,158,52",
     ].join("\n");
-    // 기존 동작 유지: 학생 템플릿은 BOM 없이 다운로드
-    downloadCsv("students_template.csv", `${header}\n${examples}\n`, { bom: false });
+    // BOM 포함 — Excel에서 열 때 한글 깨짐 방지
+    downloadCsv("students_template.csv", `${header}\n${examples}\n`);
   };
 
   // 개별 학생 비활성화

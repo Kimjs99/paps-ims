@@ -51,6 +51,27 @@ export const parseCsvWithLines = (text) =>
     .filter(({ raw }) => raw.trim())
     .map(({ line, raw }) => ({ line, cells: parseCsvLine(raw) }));
 
+// 기록시트지 표기(남/여)와 시트 저장값(M/F) 상호 변환 — CSV 업로드 시 성별 셀 정규화.
+// 인식 불가 값은 null 반환 → 호출부에서 검증 오류로 처리
+export const normalizeGender = (value) => {
+  const v = String(value ?? "").trim().toUpperCase();
+  if (["M", "남", "남자", "MALE"].includes(v)) return "M";
+  if (["F", "W", "여", "여자", "FEMALE"].includes(v)) return "F";
+  return null;
+};
+
+// CSV File → 텍스트 (인코딩 자동 감지)
+// Excel에서 "CSV(쉼표로 분리)"로 저장하면 CP949(EUC-KR)로 저장돼 UTF-8로 읽으면 한글이 깨진다.
+// UTF-8 엄격 디코딩을 먼저 시도하고, 실패하면 EUC-KR로 재시도한다.
+export const readCsvFile = async (file) => {
+  const buffer = await file.arrayBuffer();
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    return new TextDecoder("euc-kr").decode(buffer);
+  }
+};
+
 // CSV 문자열을 파일로 다운로드 (bom: Excel 한글 깨짐 방지용 UTF-8 BOM — 기본 포함)
 export const downloadCsv = (filename, content, { bom = true } = {}) => {
   const blob = new Blob([(bom ? "\uFEFF" : "") + content], { type: "text/csv;charset=utf-8;" });

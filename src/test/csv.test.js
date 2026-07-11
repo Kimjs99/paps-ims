@@ -1,5 +1,58 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { parseCsvLine, parseCsv, parseCsvWithLines, downloadCsv } from '../utils/csv';
+import { parseCsvLine, parseCsv, parseCsvWithLines, downloadCsv, normalizeGender, readCsvFile } from '../utils/csv';
+
+describe('normalizeGender (기록시트지 남/여 ↔ 시트 M/F 변환)', () => {
+  it('남/남자/M(대소문자)/male → M', () => {
+    expect(normalizeGender('남')).toBe('M');
+    expect(normalizeGender('남자')).toBe('M');
+    expect(normalizeGender('M')).toBe('M');
+    expect(normalizeGender('m')).toBe('M');
+    expect(normalizeGender('male')).toBe('M');
+  });
+
+  it('여/여자/F(대소문자)/W/female → F', () => {
+    expect(normalizeGender('여')).toBe('F');
+    expect(normalizeGender('여자')).toBe('F');
+    expect(normalizeGender('F')).toBe('F');
+    expect(normalizeGender('f')).toBe('F');
+    expect(normalizeGender('W')).toBe('F');
+    expect(normalizeGender('female')).toBe('F');
+  });
+
+  it('앞뒤 공백 허용', () => {
+    expect(normalizeGender(' 남 ')).toBe('M');
+    expect(normalizeGender(' f ')).toBe('F');
+  });
+
+  it('인식 불가 값·빈 값·null은 null', () => {
+    expect(normalizeGender('x')).toBeNull();
+    expect(normalizeGender('남여')).toBeNull();
+    expect(normalizeGender('')).toBeNull();
+    expect(normalizeGender(null)).toBeNull();
+    expect(normalizeGender(undefined)).toBeNull();
+  });
+});
+
+describe('readCsvFile (인코딩 자동 감지)', () => {
+  // readCsvFile은 file.arrayBuffer()만 사용 — Blob 대신 최소 mock으로 검증
+  const fakeFile = (bytes) => ({ arrayBuffer: async () => Uint8Array.from(bytes).buffer });
+
+  it('UTF-8 파일은 그대로 디코딩', async () => {
+    const utf8 = [...new TextEncoder().encode('학번,이름\n1,홍길동')];
+    expect(await readCsvFile(fakeFile(utf8))).toBe('학번,이름\n1,홍길동');
+  });
+
+  it('BOM 있는 UTF-8도 정상 디코딩 (TextDecoder가 BOM 제거)', async () => {
+    const utf8 = [0xef, 0xbb, 0xbf, ...new TextEncoder().encode('a,남')];
+    expect(await readCsvFile(fakeFile(utf8))).toBe('a,남');
+  });
+
+  it('EUC-KR(CP949, Excel 한글 CSV 저장) 파일은 폴백 디코딩 — 한글 깨짐 방지', async () => {
+    // '남' = B3 B2, '여' = BF A9 (EUC-KR)
+    const eucKr = [...new TextEncoder().encode('a,'), 0xb3, 0xb2, 0x0a, 0x62, 0x2c, 0xbf, 0xa9];
+    expect(await readCsvFile(fakeFile(eucKr))).toBe('a,남\nb,여');
+  });
+});
 
 describe('parseCsvWithLines (원본 행 번호 보존)', () => {
   it('빈 줄이 없으면 인덱스와 행 번호 일치 (1-base)', () => {
@@ -128,7 +181,7 @@ describe('downloadCsv', () => {
     expect(capturedBlobs[0].type).toBe('text/csv;charset=utf-8;');
   });
 
-  it('bom: false면 BOM 없이 내용 그대로 (학생 템플릿 기존 동작)', async () => {
+  it('bom: false 옵션이면 BOM 없이 내용 그대로', async () => {
     downloadCsv('students_template.csv', 'h\nrow\n', { bom: false });
     const bytes = new Uint8Array(await capturedBlobs[0].arrayBuffer());
     expect([...bytes.slice(0, 3)]).not.toEqual([0xef, 0xbb, 0xbf]);

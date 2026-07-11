@@ -14,7 +14,7 @@ import { toast } from "../../store/toastStore";
 import { buildBaseline, selectDirtyStudents } from "./classMeasureDirty";
 import { mergePrefillFormValues, restoreTypes, buildMeasurementRows } from "./classMeasureForm";
 import { buildTemplateCsv, applyCsvToFormValues } from "./classMeasureCsv";
-import { parseCsv, downloadCsv } from "../../utils/csv";
+import { parseCsv, downloadCsv, readCsvFile } from "../../utils/csv";
 
 export default function ClassMeasure() {
   const { classId } = useParams();
@@ -195,18 +195,16 @@ export default function ClassMeasure() {
   };
 
   // 측정 CSV 업로드 → formValues에 반영
-  const handleCsvUpload = (e) => {
+  const handleCsvUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const next = applyCsvToFormValues(parseCsv(ev.target.result), formValues);
-      setFormValues(next);
-      localStorage.setItem(`paps_draft_${classId}_${schoolYear}`, JSON.stringify(next));
-      toast.success("CSV 데이터가 입력란에 반영됐습니다. 확인 후 저장하세요.");
-    };
-    reader.readAsText(file, "UTF-8");
     e.target.value = "";
+    // Excel CP949 저장 파일 대응 — UTF-8 실패 시 EUC-KR 폴백
+    const text = await readCsvFile(file);
+    const next = applyCsvToFormValues(parseCsv(text), formValues);
+    setFormValues(next);
+    localStorage.setItem(`paps_draft_${classId}_${schoolYear}`, JSON.stringify(next));
+    toast.success("CSV 데이터가 입력란에 반영됐습니다. 확인 후 저장하세요.");
   };
 
   return (
