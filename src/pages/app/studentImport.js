@@ -16,6 +16,15 @@ export const IMPORT_FIELDS = [
   { key: "weight", label: "몸무게(kg)", keywords: ["몸무게", "체중", "weight"] },
 ];
 
+// 체력측정 기록 매핑 대상 — 종목 키워드로 영역 시작 컬럼을 찾고,
+// 같은 영역 구간(1차·2차·점수·등급...) 안의 "최고" 컬럼을 기록값으로 우선 사용
+export const MEASURE_FIELDS = [
+  { key: "cardio_value", label: "심폐지구력 기록", keywords: ["심폐", "셔틀런", "왕복", "오래달리기", "스텝"] },
+  { key: "muscle_value", label: "근력·근지구력 기록", keywords: ["근력", "악력", "윗몸", "팔굽혀"] },
+  { key: "flexibility_value", label: "유연성 기록", keywords: ["유연성", "앉아윗몸"] },
+  { key: "agility_value", label: "순발력 기록", keywords: ["순발력", "제자리", "50m"] },
+];
+
 // 헤더 셀 정규화: 공백·개행 제거 + 소문자 — "키\n(cm)" → "키(cm)"
 const normalizeCell = (cell) => String(cell ?? "").replace(/\s+/g, "").toLowerCase();
 
@@ -64,6 +73,43 @@ export const detectHeaderRow = (grid, { maxScan = 20 } = {}) => {
   return { headerRow: best.headerRow, mapping: best.mapping };
 };
 
+// 체력측정 기록 컬럼 추정 — 기록시트지의 "유연성 1차/2차 → 최고" 구조 대응.
+// 종목 키워드가 처음 나오는 컬럼부터 다른 종목(또는 키/체중/BMI/총점) 전까지를 그 종목 구간으로 보고,
+// 구간 안에 "최고" 컬럼이 있으면 그 컬럼(최고 기록)을, 없으면 시작 컬럼(단일 기록)을 사용한다.
+export const guessMeasurementMapping = (cells) => {
+  const norm = (cells || []).map(normalizeCell);
+  const matchArea = (c) => MEASURE_FIELDS.find((f) => f.keywords.some((kw) => c.includes(kw)))?.key;
+  const isBoundary = (c) => ["키(", "신장", "체중", "몸무게", "bmi", "총점", "종합"].some((kw) => c.includes(kw)) || c === "키";
+  const mapping = {};
+  MEASURE_FIELDS.forEach((field) => {
+    const start = norm.findIndex((c) => c && matchArea(c) === field.key);
+    if (start < 0) return;
+    let pick = start;
+    for (let i = start + 1; i < norm.length; i++) {
+      const c = norm[i];
+      const area = matchArea(c);
+      if ((area && area !== field.key) || isBoundary(c)) break; // 다른 영역 시작 → 구간 종료
+      if (c.includes("최고")) { pick = i; break; }
+    }
+    mapping[field.key] = pick;
+  });
+  return mapping;
+};
+
+// 헤더 전체 텍스트에서 측정 종목 유형 추정 (앱 저장용 type 값)
+export const guessTypes = (cells) => {
+  const all = (cells || []).map(normalizeCell).join("|");
+  return {
+    cardioType: all.includes("스텝")
+      ? "step_test"
+      : !all.includes("셔틀런") && !all.includes("왕복") && all.includes("오래달리기")
+        ? "endurance_run"
+        : "shuttle_run",
+    muscleType: all.includes("악력") ? "grip_strength" : "sit_up",
+    agilityType: all.includes("제자리") ? "standing_jump" : "sprint_50m",
+  };
+};
+
 // 양식 식별 서명 — 같은 양식(같은 헤더 구성) 재업로드 시 프리셋 자동 적용용
 export const mappingSignature = (headerCells) =>
   (headerCells || []).map(normalizeCell).filter(Boolean).join("|");
@@ -78,6 +124,9 @@ const optionalMeasure = (v) => {
   const n = firstNumber(v);
   return n === "" || Number(n) === 0 ? "" : n;
 };
+
+// 체력측정 기록값: 음수 허용(유연성 -8.7cm 등), 0도 유효한 기록
+const measureValue = (v) => String(v ?? "").match(/-?\d+(\.\d+)?/)?.[0] ?? "";
 
 // 그리드 + 매핑 → 학생 후보/오류 목록 (Zod 검증 전 단계)
 // opts: schoolYear(학번 생성용), fallbackGrade/fallbackClass(컬럼 미매핑 시 수동 입력값), existingIds(중복 학번 Set)
@@ -135,6 +184,13 @@ export const buildImportRows = (grid, headerRow, mapping, opts = {}) => {
         class: cls,
         height: optionalMeasure(cell(row, "height")),
         weight: optionalMeasure(cell(row, "weight")),
+      },
+      // 체력측정 기록 (매핑된 컬럼만) — 학생 스키마와 분리해 측정 저장 경로로 전달
+      measures: {
+        cardio_value: measureValue(cell(row, "cardio_value")),
+        muscle_value: measureValue(cell(row, "muscle_value")),
+        flexibility_value: measureValue(cell(row, "flexibility_value")),
+        agility_value: measureValue(cell(row, "agility_value")),
       },
     });
   });

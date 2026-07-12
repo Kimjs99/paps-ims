@@ -12,8 +12,10 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { toast } from "../../store/toastStore";
 import { parseCsv, readCsvFile } from "../../utils/csv";
+import { CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES } from "../../constants/paps";
 import {
-  IMPORT_FIELDS, detectHeaderRow, guessMapping, mappingSignature, buildImportRows,
+  IMPORT_FIELDS, MEASURE_FIELDS, detectHeaderRow, guessMapping, guessMeasurementMapping,
+  guessTypes, mappingSignature, buildImportRows,
 } from "../../pages/app/studentImport";
 
 const PRESET_KEY = "paps-import-presets";
@@ -50,6 +52,52 @@ async function fileToGrid(file, sheetName) {
   return { grid: parseCsv(text), sheetNames: [], sheetName: null };
 }
 
+// 컬럼 매핑 셀렉트 (학생 필드·측정 기록 공용)
+function ColumnSelect({ label, fieldKey, mapping, setMapping, headerCells, extra }) {
+  return (
+    <div className="space-y-1">
+      <Label>
+        {label}
+        {extra}
+      </Label>
+      <Select
+        value={mapping[fieldKey] != null ? String(mapping[fieldKey]) : NONE}
+        onValueChange={(v) => setMapping((m) => {
+          const next = { ...m };
+          if (v === NONE) delete next[fieldKey];
+          else next[fieldKey] = Number(v);
+          return next;
+        })}
+      >
+        <SelectTrigger aria-label={`${label} 컬럼 선택`}><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>— 없음 —</SelectItem>
+          {headerCells.map((cell, idx) => (
+            <SelectItem key={idx} value={String(idx)}>
+              {colLabel(idx)}열: {String(cell).replace(/\s+/g, " ").slice(0, 20) || "(빈 셀)"}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// 측정 종목 유형 셀렉트
+function TypeSelect({ label, value, onChange, options }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-gray-500">{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-40" aria-label={label}><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {options.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 // 임의 양식(CSV/XLSX) → 컬럼 매핑 → 학생 일괄 등록 후보 생성 마법사
 // 검증·등록은 Students 페이지의 기존 경로(csvPreview → 일괄 등록)를 재사용한다.
 export function ImportWizardDialog({
@@ -65,20 +113,34 @@ export function ImportWizardDialog({
   const [mapping, setMapping] = useState({});
   const [fbGrade, setFbGrade] = useState("");
   const [fbClass, setFbClass] = useState("");
+  const [importMeasures, setImportMeasures] = useState(false);
+  const [types, setTypes] = useState({ cardioType: "shuttle_run", muscleType: "sit_up", agilityType: "sprint_50m" });
 
   const reset = () => {
     setFile(null); setGrid(null); setSheetNames([]); setSheetName(null);
     setHeaderRow(-1); setMapping({}); setFbGrade(""); setFbClass("");
+    setImportMeasures(false);
+    setTypes({ cardioType: "shuttle_run", muscleType: "sit_up", agilityType: "sprint_50m" });
   };
+
+  // 헤더 행 기준 학생 + 측정 기록 컬럼 자동 매핑
+  const autoMap = (headerCells) => ({
+    ...guessMapping(headerCells),
+    ...guessMeasurementMapping(headerCells),
+  });
 
   const applyGrid = (g) => {
     setGrid(g);
     const detected = detectHeaderRow(g);
     const row = detected.headerRow >= 0 ? detected.headerRow : 0;
     setHeaderRow(row);
-    // 같은 양식을 다시 올리면 저장된 매핑 프리셋 자동 적용
+    // 같은 양식을 다시 올리면 저장된 매핑 프리셋 자동 적용 (구버전 프리셋은 mapping 객체 그대로)
     const preset = loadPresets()[mappingSignature(g[row])];
-    setMapping(preset || detected.mapping);
+    const nextMapping = preset?.mapping || preset || autoMap(g[row]);
+    setMapping(nextMapping);
+    setTypes(preset?.types || guessTypes(g[row]));
+    // 측정 기록 컬럼이 하나라도 인식되면 함께 등록 기본 활성화
+    setImportMeasures(MEASURE_FIELDS.some((f) => nextMapping[f.key] != null));
   };
 
   const handleFile = async (f, targetSheet) => {
@@ -116,13 +178,20 @@ export function ImportWizardDialog({
   const handleApply = () => {
     const valid = [];
     const errors = [...built.errors];
-    built.candidates.forEach(({ line, data }) => {
+    const byStudent = {};
+    built.candidates.forEach(({ line, data, measures }) => {
       const result = studentSchema.safeParse(data);
-      if (result.success) valid.push(result.data);
-      else errors.push(`${line}행(${data.name}): ${result.error.issues.map((i) => i.message).join(", ")}`);
+      if (result.success) {
+        valid.push(result.data);
+        if (Object.values(measures).some((v) => v !== "")) byStudent[result.data.student_id] = measures;
+      } else {
+        errors.push(`${line}행(${data.name}): ${result.error.issues.map((i) => i.message).join(", ")}`);
+      }
     });
-    savePreset(mappingSignature(headerCells), mapping);
-    onApply(valid, errors);
+    savePreset(mappingSignature(headerCells), { mapping, types });
+    const measurePayload =
+      importMeasures && Object.keys(byStudent).length > 0 ? { types, byStudent } : null;
+    onApply(valid, errors, measurePayload);
     reset();
     onOpenChange(false);
   };
@@ -184,33 +253,66 @@ export function ImportWizardDialog({
 
             <div className="grid grid-cols-2 gap-3">
               {IMPORT_FIELDS.map((field) => (
-                <div key={field.key} className="space-y-1">
-                  <Label>
-                    {field.label}
-                    {field.key === "name" && " *"}
-                    {field.key === "number" && <span className="text-gray-400 font-normal text-xs"> (학번 생성용)</span>}
-                  </Label>
-                  <Select
-                    value={mapping[field.key] != null ? String(mapping[field.key]) : NONE}
-                    onValueChange={(v) => setMapping((m) => {
-                      const next = { ...m };
-                      if (v === NONE) delete next[field.key];
-                      else next[field.key] = Number(v);
-                      return next;
-                    })}
-                  >
-                    <SelectTrigger aria-label={`${field.label} 컬럼 선택`}><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>— 없음 —</SelectItem>
-                      {headerCells.map((cell, idx) => (
-                        <SelectItem key={idx} value={String(idx)}>
-                          {colLabel(idx)}열: {String(cell).replace(/\s+/g, " ").slice(0, 20) || "(빈 셀)"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <ColumnSelect
+                  key={field.key}
+                  label={field.label}
+                  fieldKey={field.key}
+                  mapping={mapping}
+                  setMapping={setMapping}
+                  headerCells={headerCells}
+                  extra={
+                    field.key === "name" ? " *"
+                      : field.key === "number" ? <span className="text-gray-400 font-normal text-xs"> (학번 생성용)</span>
+                      : null
+                  }
+                />
               ))}
+            </div>
+
+            {/* 체력측정 기록 함께 등록 */}
+            <div className="p-3 border rounded-lg space-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={importMeasures}
+                  onChange={(e) => setImportMeasures(e.target.checked)}
+                />
+                체력측정 기록도 함께 등록 (등급·BMI는 기준표로 자동 계산)
+              </label>
+              {importMeasures && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    {MEASURE_FIELDS.map((field) => (
+                      <ColumnSelect
+                        key={field.key}
+                        label={field.label}
+                        fieldKey={field.key}
+                        mapping={mapping}
+                        setMapping={setMapping}
+                        headerCells={headerCells}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex gap-3 flex-wrap">
+                    <TypeSelect
+                      label="심폐지구력 종목" options={CARDIO_TYPES}
+                      value={types.cardioType}
+                      onChange={(v) => setTypes((t) => ({ ...t, cardioType: v }))}
+                    />
+                    <TypeSelect
+                      label="근력·근지구력 종목" options={MUSCLE_TYPES}
+                      value={types.muscleType}
+                      onChange={(v) => setTypes((t) => ({ ...t, muscleType: v }))}
+                    />
+                    <TypeSelect
+                      label="순발력 종목" options={AGILITY_TYPES}
+                      value={types.agilityType}
+                      onChange={(v) => setTypes((t) => ({ ...t, agilityType: v }))}
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* 학년/반 컬럼이 없는 양식(학급 단위 시트) → 직접 입력 */}
@@ -252,10 +354,13 @@ export function ImportWizardDialog({
                     <TableRow>
                       <TableHead>학번</TableHead><TableHead>이름</TableHead><TableHead>성별</TableHead>
                       <TableHead>학년</TableHead><TableHead>반</TableHead><TableHead>키</TableHead><TableHead>몸무게</TableHead>
+                      {importMeasures && (
+                        <><TableHead>심폐</TableHead><TableHead>근력</TableHead><TableHead>유연성</TableHead><TableHead>순발력</TableHead></>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {built.candidates.slice(0, 8).map(({ line, data }) => (
+                    {built.candidates.slice(0, 8).map(({ line, data, measures }) => (
                       <TableRow key={line}>
                         <TableCell>{data.student_id}</TableCell>
                         <TableCell>{data.name}</TableCell>
@@ -264,6 +369,14 @@ export function ImportWizardDialog({
                         <TableCell>{data.class}</TableCell>
                         <TableCell>{data.height}</TableCell>
                         <TableCell>{data.weight}</TableCell>
+                        {importMeasures && (
+                          <>
+                            <TableCell>{measures.cardio_value}</TableCell>
+                            <TableCell>{measures.muscle_value}</TableCell>
+                            <TableCell>{measures.flexibility_value}</TableCell>
+                            <TableCell>{measures.agility_value}</TableCell>
+                          </>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

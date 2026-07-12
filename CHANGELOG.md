@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.19.0] - 2026-07-12
+
+### ✨ Features
+- **가져오기 마법사: 체력측정 기록 자동 등록** — 기록시트지의 종목별 기록(심폐·근력·유연성·순발력)을 학생 명단과 함께 measurements 시트에 저장
+  - 종목 구간 인식: "유연성 1차/2차 → 최고" 구조에서 구간 안의 **최고 기록 컬럼**을 자동 선택 (`guessMeasurementMapping`)
+  - 종목 유형 자동 추정(`guessTypes`): 셔틀런→왕복오래달리기, 악력, 제자리멀리뛰기 등 — 드롭다운으로 변경 가능
+  - 저장은 반별 측정과 동일 파이프라인(`buildMeasurementRows`→`buildGrades`) 재사용 — 종목 등급·BMI 등급·종합 등급 자동 계산
+  - 음수 기록 허용(유연성 -8.7cm 등), 측정값 없는 학생은 measurements 미생성, 부분 측정 지원
+  - 미리보기에 심폐/근력/유연성/순발력 열 추가, 프리셋에 종목 유형 포함 저장
+
+### ✅ Tests
+- Vitest 371 → **380 케이스**: 측정 컬럼 구간·최고 추정, 종목 유형 추정, 음수 기록, 측정 페이로드 전달·체크 해제
+
 ## [v0.18.0] - 2026-07-12
 
 ### ✨ Features

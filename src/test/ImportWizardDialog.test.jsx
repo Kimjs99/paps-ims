@@ -72,7 +72,8 @@ describe('ImportWizardDialog', () => {
         expect.objectContaining({ student_id: '20261101', name: '권민준', gender: 'M', grade: 1, class: 1, height: 152 }),
         expect.objectContaining({ student_id: '20261102', name: '김라임', gender: 'F' }),
       ],
-      []
+      [],
+      null // 측정 컬럼 없는 양식
     );
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -88,12 +89,52 @@ describe('ImportWizardDialog', () => {
     fireEvent.click(screen.getByText('1명 검증 후 등록 목록에 추가'));
     expect(props.onApply).toHaveBeenCalledWith(
       [expect.objectContaining({ student_id: '20240101', name: '홍길동', gender: 'M', grade: 1, class: 1 })],
-      []
+      [],
+      null // 측정 컬럼이 없는 양식 → 측정 페이로드 없음
     );
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('적용 시 양식 서명별 매핑 프리셋이 localStorage에 저장됨', async () => {
+  it('측정 기록 컬럼이 있으면 적용 시 measures 페이로드 전달 (종목 유형 추정 포함)', async () => {
+    const props = defaultProps();
+    render(<ImportWizardDialog {...props} />);
+    await uploadFile([
+      '번호,이름,성별,학년,"셔틀런\n(회)","유연성\n1차(cm)","최고\n(cm)"',
+      '1,권민준,남,1,42,-8.5,-8.7',
+      '2,김라임,여,1,,10.1,10.5',
+    ].join('\n'));
+
+    // 측정 컬럼 자동 인식 → 함께 등록 체크박스 활성 + 미리보기에 심폐 열 표시
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    fireEvent.change(screen.getByLabelText('반 직접 입력'), { target: { value: '1' } });
+    await waitFor(() => expect(screen.getByText(/2명 인식/)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('2명 검증 후 등록 목록에 추가'));
+    expect(props.onApply).toHaveBeenCalledWith(
+      expect.any(Array),
+      [],
+      {
+        // 이 양식엔 순발력 단서가 없어 기본 종목(sprint_50m) 유지
+        types: { cardioType: 'shuttle_run', muscleType: 'sit_up', agilityType: 'sprint_50m' },
+        byStudent: {
+          20261101: { cardio_value: '42', muscle_value: '', flexibility_value: '-8.7', agility_value: '' },
+          20261102: { cardio_value: '', muscle_value: '', flexibility_value: '10.5', agility_value: '' },
+        },
+      }
+    );
+  });
+
+  it('함께 등록 체크 해제 시 measures 페이로드 null', async () => {
+    const props = defaultProps();
+    render(<ImportWizardDialog {...props} />);
+    await uploadFile('학번,이름,성별,학년,반,"셔틀런\n(회)"\nS1,홍길동,남,1,1,42');
+
+    fireEvent.click(screen.getByRole('checkbox')); // 해제
+    fireEvent.click(screen.getByText(/검증 후 등록 목록에 추가/));
+    expect(props.onApply).toHaveBeenCalledWith(expect.any(Array), [], null);
+  });
+
+  it('적용 시 양식 서명별 매핑+종목 프리셋이 localStorage에 저장됨', async () => {
     const props = defaultProps();
     render(<ImportWizardDialog {...props} />);
     await uploadFile('학번,이름,성별,학년,반\nS1,홍길동,남,1,1');
@@ -102,7 +143,8 @@ describe('ImportWizardDialog', () => {
     const presets = JSON.parse(localStorage.getItem('paps-import-presets'));
     const sig = Object.keys(presets)[0];
     expect(sig).toBe('학번|이름|성별|학년|반');
-    expect(presets[sig]).toEqual({ student_id: 0, name: 1, gender: 2, grade: 3, class: 4 });
+    expect(presets[sig].mapping).toEqual({ student_id: 0, name: 1, gender: 2, grade: 3, class: 4 });
+    expect(presets[sig].types).toEqual({ cardioType: 'shuttle_run', muscleType: 'sit_up', agilityType: 'sprint_50m' });
   });
 
   it('이미 등록된 학번은 오류로 표시', async () => {

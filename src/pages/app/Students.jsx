@@ -3,7 +3,10 @@ import { Search, UserPlus, Upload, Download, Loader2, Trash2, UserX, Wand2 } fro
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { v4 as uuidv4 } from "uuid";
-import { useStudents, useAddStudent, useBulkAddStudents, useDeactivateStudent, useDeactivateClassStudents } from "../../hooks/useSheets";
+import { useStudents, useAddStudent, useBulkAddStudents, useDeactivateStudent, useDeactivateClassStudents, useSaveMeasurementsBatch } from "../../hooks/useSheets";
+import { useGradesStandard } from "../../hooks/useGradeCalc";
+import { useAuthStore } from "../../store/authStore";
+import { buildMeasurementRows } from "./classMeasureForm";
 import { makeStudentSchema } from "../../utils/validators";
 import { GRADE_RANGE_BY_LEVEL } from "../../utils/gradesStandardSeed";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -92,6 +95,9 @@ export default function Students() {
   const bulkAdd = useBulkAddStudents();
   const deactivate = useDeactivateStudent();
   const deactivateClass = useDeactivateClassStudents();
+  const saveMeasurements = useSaveMeasurementsBatch();
+  const { data: gradesData } = useGradesStandard();
+  const { user } = useAuthStore();
   const fileRef = useRef();
   const schoolLevel = useSettingsStore((s) => s.schoolLevel);
   const schoolYear = useSettingsStore((s) => s.schoolYear);
@@ -103,6 +109,8 @@ export default function Students() {
   const [importOpen, setImportOpen] = useState(false);
   const [csvPreview, setCsvPreview] = useState(null);
   const [csvErrors, setCsvErrors] = useState([]);
+  // 가져오기 마법사의 체력측정 기록 페이로드 { types, byStudent } — 일괄 등록 시 measurements도 저장
+  const [csvMeasures, setCsvMeasures] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // {student, rowIndex}
   const [classDeleteConfirm, setClassDeleteConfirm] = useState(false);
 
@@ -180,6 +188,7 @@ export default function Students() {
     });
     setCsvPreview(valid.length > 0 ? valid : null);
     setCsvErrors(errors);
+    setCsvMeasures(null); // 기존 CSV 업로드 경로에는 측정 기록 없음
     if (errors.length > 0) {
       toast.error(`CSV ${errors.length}행 검증 실패 — 해당 행은 제외됩니다.`);
     }
@@ -188,10 +197,11 @@ export default function Students() {
     }
   };
 
-  // 가져오기 마법사 결과 → 기존 CSV 미리보기·일괄 등록 경로 재사용
-  const handleImportApply = (valid, errors) => {
+  // 가져오기 마법사 결과 → 기존 CSV 미리보기·일괄 등록 경로 재사용 (measures는 등록 시 함께 저장)
+  const handleImportApply = (valid, errors, measures = null) => {
     setCsvPreview(valid.length > 0 ? valid : null);
     setCsvErrors(errors);
+    setCsvMeasures(valid.length > 0 ? measures : null);
     if (errors.length > 0) {
       toast.error(`${errors.length}행 검증 실패 — 해당 행은 제외됩니다.`);
     }
@@ -258,12 +268,40 @@ export default function Students() {
     try {
       await bulkAdd.mutateAsync(csvPreview);
       toast.success(`${csvPreview.length}명이 등록됐습니다.`);
-      setCsvPreview(null);
-      setCsvErrors([]);
     } catch (err) {
       console.error("[bulkAddStudents]", err);
       toast.error(`일괄 등록 실패: ${err?.message || "알 수 없는 오류"}`);
+      bulkAdd.reset(); // isPending 고착 방지
+      return;
     }
+    // 마법사에서 체력측정 기록을 함께 가져온 경우 measurements도 저장 (등급은 기준표로 자동 계산)
+    if (csvMeasures) {
+      const targets = csvPreview.filter((s) => csvMeasures.byStudent[s.student_id]);
+      const formValues = Object.fromEntries(
+        targets.map((s) => [s.student_id, {
+          height: s.height ?? "",
+          weight: s.weight ?? "",
+          ...csvMeasures.byStudent[s.student_id],
+        }])
+      );
+      try {
+        const rows = buildMeasurementRows(
+          targets, formValues,
+          { cardioType: csvMeasures.types.cardioType, muscleType: csvMeasures.types.muscleType, agilityType: csvMeasures.types.agilityType },
+          { schoolYear, teacherEmail: user?.email || "", schoolLevel },
+          gradesData
+        );
+        await saveMeasurements.mutateAsync(rows);
+        toast.success(`체력측정 기록 ${rows.length}건이 저장됐습니다.`);
+      } catch (err) {
+        console.error("[importMeasurements]", err);
+        toast.error(`측정 기록 저장 실패 (학생 등록은 완료됨): ${err?.message || "알 수 없는 오류"}`);
+        saveMeasurements.reset(); // isPending 고착 방지
+      }
+    }
+    setCsvPreview(null);
+    setCsvErrors([]);
+    setCsvMeasures(null);
   };
 
   return (
@@ -291,11 +329,15 @@ export default function Students() {
       {csvPreview && (
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-blue-800">{csvPreview.length}명 파싱됨 — 등록하시겠습니까?</p>
+            <p className="text-sm font-medium text-blue-800">
+              {csvPreview.length}명 파싱됨
+              {csvMeasures && ` (체력측정 기록 ${Object.keys(csvMeasures.byStudent).length}명분 포함)`}
+              {" — 등록하시겠습니까?"}
+            </p>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => { setCsvPreview(null); setCsvErrors([]); }}>취소</Button>
-              <Button size="sm" onClick={handleCsvUpload} disabled={bulkAdd.isPending}>
-                {bulkAdd.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "일괄 등록"}
+              <Button size="sm" variant="outline" onClick={() => { setCsvPreview(null); setCsvErrors([]); setCsvMeasures(null); }}>취소</Button>
+              <Button size="sm" onClick={handleCsvUpload} disabled={bulkAdd.isPending || saveMeasurements.isPending}>
+                {bulkAdd.isPending || saveMeasurements.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "일괄 등록"}
               </Button>
             </div>
           </div>
