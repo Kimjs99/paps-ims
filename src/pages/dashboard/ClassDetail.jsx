@@ -10,6 +10,7 @@ import { useMeasurements, useStudents } from "../../hooks/useSheets";
 import { FITNESS_AREAS } from "../../constants/paps";
 import { avgOf, avgFixed1 } from "../../utils/stats";
 import { Users, CheckCircle, Star } from "lucide-react";
+import { useMaskName } from "../../hooks/useMaskName";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -69,6 +70,7 @@ function ClassList({ students, measurements }) {
 }
 
 export default function ClassDetail() {
+  const mask = useMaskName();
   const { classId } = useParams();
   const { data: allStudents = [], isLoading: sLoading } = useStudents();
   const { data: allMeasurements = [], isLoading: mLoading, dataUpdatedAt } = useMeasurements();
@@ -211,7 +213,7 @@ export default function ClassDetail() {
               return (
                 <div key={s.student_id} className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                    <span className="text-sm font-medium text-gray-800">{mask(s.name)}</span>
                     <span className="text-xs text-gray-400">{s.student_id}</span>
                   </div>
                   <div className="flex items-center gap-3">

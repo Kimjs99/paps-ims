@@ -25,6 +25,7 @@ import {
 import { toast } from "../../store/toastStore";
 import { parseCsvWithLines, downloadCsv, normalizeGender, readCsvFile } from "../../utils/csv";
 import { ImportWizardDialog } from "../../components/students/ImportWizardDialog";
+import { useMaskName } from "../../hooks/useMaskName";
 
 function StudentForm({ onSubmit, isLoading, schema, gradeOptions }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
@@ -102,6 +103,7 @@ export default function Students() {
   const schoolLevel = useSettingsStore((s) => s.schoolLevel);
   const schoolYear = useSettingsStore((s) => s.schoolYear);
 
+  const mask = useMaskName();
   const [search, setSearch] = useState("");
   const [gradeFilter, setGradeFilter] = useState("all");
   const [classFilter, setClassFilter] = useState("all");
@@ -343,7 +345,7 @@ export default function Students() {
           </div>
           <div className="text-xs text-blue-600 space-y-0.5 max-h-24 overflow-auto">
             {csvPreview.slice(0, 5).map((s, i) => (
-              <p key={i}>{s.student_id} / {s.name} / {s.grade}학년 {s.class}반</p>
+              <p key={i}>{s.student_id} / {mask(s.name)} / {s.grade}학년 {s.class}반</p>
             ))}
             {csvPreview.length > 5 && <p>... 외 {csvPreview.length - 5}명</p>}
           </div>
@@ -439,7 +441,7 @@ export default function Students() {
                   return (
                     <TableRow key={s.student_id} className={s.is_active === false ? "opacity-50" : ""}>
                       <TableCell className="font-mono text-sm">{s.student_id}</TableCell>
-                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell className="font-medium">{mask(s.name)}</TableCell>
                       <TableCell className="text-center">{s.gender === "M" ? "남" : "여"}</TableCell>
                       <TableCell className="text-center">{s.grade}</TableCell>
                       <TableCell className="text-center">{s.class}</TableCell>
@@ -455,7 +457,7 @@ export default function Students() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            aria-label={`${s.name} 비활성화`}
+                            aria-label={`${mask(s.name)} 비활성화`}
                             className="h-7 w-7 text-gray-400 hover:text-red-500"
                             onClick={() => setDeleteTarget({ rowIndex, student: s })}
                           >
@@ -496,7 +498,7 @@ export default function Students() {
           <DialogHeader>
             <DialogTitle>학생 비활성화</DialogTitle>
             <DialogDescription>
-              <strong>{deleteTarget?.student?.name}</strong> 학생을 비활성화하시겠습니까?
+              <strong>{mask(deleteTarget?.student?.name)}</strong> 학생을 비활성화하시겠습니까?
               <br />
               측정 이력은 보존되며, 학생 목록에서 제외됩니다.
             </DialogDescription>

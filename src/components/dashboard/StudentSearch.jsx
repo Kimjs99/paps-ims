@@ -2,8 +2,10 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
+import { useMaskName } from "../../hooks/useMaskName";
 
 export function StudentSearch({ students }) {
+  const mask = useMaskName();
   const [query, setQuery] = useState("");
   const results = useMemo(() => {
     if (!query.trim()) return [];
@@ -45,7 +47,7 @@ export function StudentSearch({ students }) {
                   className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
                 >
                   <div>
-                    <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                    <span className="text-sm font-medium text-gray-800">{mask(s.name)}</span>
                     <span className="ml-2 text-xs text-gray-400">{s.student_id}</span>
                   </div>
                   <span className="text-xs text-gray-500">

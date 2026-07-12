@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { GRADE_COLORS, FITNESS_AREAS } from "../../constants/paps";
+import { useMaskName } from "../../hooks/useMaskName";
 
 // 영역별 등급 분포 집계
 function calcAreaStats(measurements, areaGradeKey) {
@@ -36,6 +37,7 @@ function GradeCell({ grade }) {
 }
 
 export function ClassReportPreview({ measurements, students, schoolName, schoolYear, className, teacherName }) {
+  const mask = useMaskName();
   const areaStats = useMemo(
     () => AREAS.map((a) => ({ ...a, ...calcAreaStats(measurements, a.gradeKey) })),
     [measurements]
@@ -167,7 +169,7 @@ export function ClassReportPreview({ measurements, students, schoolName, schoolY
             {measuredStudents.map(({ m, s }, idx) => (
               <tr key={m.student_id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                 <td className="border px-2 py-1 text-center text-gray-500">{idx + 1}</td>
-                <td className="border px-2 py-1 font-medium">{s.name}</td>
+                <td className="border px-2 py-1 font-medium">{mask(s.name)}</td>
                 <td className="border px-2 py-1 text-center text-gray-600">
                   {s.gender === "M" ? "남" : "여"}
                 </td>

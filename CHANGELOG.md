@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.0] - 2026-07-12
+
+### ✨ Features
+- **학생 실명 블라인드** — 화면에 표시되는 학생 이름을 성만 남기고 마스킹 (김민준 → 김**). 기본 활성
+  - 설정 → 개인정보 보호 토글로 켜고 끔 (측정 입력 등 실명 필요 시 일시 해제)
+  - **표시 전용**: Sheet 원본·Excel 원시 데이터 내보내기·검색(실명으로 검색 가능)·수정 폼은 영향 없음
+  - 적용 범위: 학생 관리·측정 입력(학급/개별)·대시보드(학급별/학생 검색/등급 필터)·보고서(학급/개인 성장 카드 — 화면 기반 PDF도 마스킹)
+  - `utils/privacy.js`(maskName) + `hooks/useMaskName.js`, 설정 시스템 정보의 앱 버전도 package.json 자동 표기로 교체
+
 ## [v1.0.2] - 2026-07-12
 
 ### 🐛 Fixes

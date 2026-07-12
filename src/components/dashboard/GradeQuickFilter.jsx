@@ -3,8 +3,10 @@ import { X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { GradeBadge } from "../ui/GradeBadge";
 import { GRADE_COLORS } from "../../constants/paps";
+import { useMaskName } from "../../hooks/useMaskName";
 
 export function GradeQuickFilter({ measurements, students }) {
+  const mask = useMaskName();
   const [activeGrade, setActiveGrade] = useState(null);
 
   const getStudentsByGrade = (grade) => {
@@ -73,7 +75,7 @@ export function GradeQuickFilter({ measurements, students }) {
                 {list.map((s) => (
                   <div key={s.student_id} className="flex items-center justify-between px-4 py-2.5">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                      <span className="text-sm font-medium text-gray-800">{mask(s.name)}</span>
                       <span className="text-xs text-gray-500">
                         {s.grade}학년 {s.class}반
                       </span>

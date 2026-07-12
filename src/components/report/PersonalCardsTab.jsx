@@ -2,6 +2,7 @@
 // 선택/내보내기 상태와 핸들러는 페이지가 보유 (isExporting은 탭 간 공유, 일괄 렌더는 페이지 루트에서 수행)
 import { Download, Loader2 } from "lucide-react";
 import { PersonalGrowthCard } from "./PersonalGrowthCard";
+import { useMaskName } from "../../hooks/useMaskName";
 
 export function PersonalCardsTab({
   filteredStudents, classLabel,
@@ -11,6 +12,7 @@ export function PersonalCardsTab({
   isExporting, isBatchRendering, progress,
   schoolName, schoolYear,
 }) {
+  const mask = useMaskName();
   return (
     <div className="space-y-4">
       {/* 학생 선택 */}
@@ -30,7 +32,7 @@ export function PersonalCardsTab({
                 .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
                 .map((s) => (
                   <option key={s.student_id} value={s.student_id}>
-                    {s.grade}학년 {s.class}반 {s.name}
+                    {s.grade}학년 {s.class}반 {mask(s.name)}
                   </option>
                 ))}
             </select>

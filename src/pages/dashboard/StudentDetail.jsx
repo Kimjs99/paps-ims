@@ -7,6 +7,7 @@ import { StudentSearch } from "../../components/dashboard/StudentSearch";
 import { useStudents, useMeasurements } from "../../hooks/useSheets";
 import { StudentAvgGradeCards } from "./StudentAvgGradeCards";
 import { StudentHistoryTable } from "./StudentHistoryTable";
+import { useMaskName } from "../../hooks/useMaskName";
 import {
   AREA_KEYS, AREA_LABELS, AREA_ITEMS,
   selectRawMeasurements, getAvailableYears, selectTrendMeasurements,
@@ -14,6 +15,7 @@ import {
 } from "./studentDetailData";
 
 export default function StudentDetail() {
+  const mask = useMaskName();
   const { studentId } = useParams();
   const { data: students = [], isLoading: sLoading } = useStudents();
   const { data: measurements = [], isLoading: mLoading, dataUpdatedAt } = useMeasurements();
@@ -95,7 +97,7 @@ export default function StudentDetail() {
         <div className="bg-white rounded-xl border p-5">
           <div className="flex flex-wrap items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">{student.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-800">{mask(student.name)}</h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 학번: {student.student_id} · {student.grade}학년 {student.class}반 ·{" "}
                 {student.gender === "M" ? "남" : "여"}

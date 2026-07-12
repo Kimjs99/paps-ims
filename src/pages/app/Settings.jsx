@@ -27,13 +27,14 @@ import { getMeasurements, batchUpdateMeasurementGrades } from "../../api/measure
 import { seedGradesStandard } from "../../api/gradesStandard";
 import { buildGrades } from "../../utils/gradeCalc";
 import { SCHOOL_LEVELS } from "../../utils/gradesStandardSeed";
+import { version as APP_VERSION } from "../../../package.json";
 
 export default function Settings() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const {
     sheetId, schoolName, schoolYear, teacherName, schoolLevel,
-    setSheetId, setSchoolInfo,
+    setSheetId, setSchoolInfo, maskNames, setMaskNames,
   } = useSettingsStore();
   const handleLogout = useLogout();
 
@@ -347,7 +348,7 @@ export default function Settings() {
             <div className="text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-500">앱 버전</span>
-                <span className="font-mono">1.0.0</span>
+                <span className="font-mono">{APP_VERSION}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">스키마 버전 (앱)</span>
@@ -367,6 +368,30 @@ export default function Settings() {
                 <RefreshCw className="h-4 w-4" /> 버전 재확인
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 개인정보 보호 */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">개인정보 보호</CardTitle></CardHeader>
+          <CardContent>
+            <label className="flex items-start justify-between gap-4 cursor-pointer">
+              <div>
+                <p className="text-sm font-medium">학생 실명 블라인드</p>
+                <p className="text-xs text-gray-500">
+                  화면에 표시되는 학생 이름을 성만 남기고 마스킹합니다 (예: 김**).
+                  화면 공유·시연 시 개인정보 노출을 막아줍니다. Sheet 원본과 Excel 원시 데이터 내보내기에는 영향이 없으며,
+                  측정 입력 시 실명이 필요하면 잠시 끄고 사용하세요.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                className="h-5 w-5 mt-0.5 shrink-0"
+                aria-label="학생 실명 블라인드"
+                checked={maskNames}
+                onChange={(e) => setMaskNames(e.target.checked)}
+              />
+            </label>
           </CardContent>
         </Card>
 

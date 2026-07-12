@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { MeasurementStatusBadge } from "./MeasurementStatusBadge";
 import { VALID_RANGES, CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES } from "../../constants/paps";
+import { useMaskName } from "../../hooks/useMaskName";
 
 // 유효 범위 체크
 const isOutOfRange = (field, value) => {
@@ -19,6 +20,7 @@ export function ClassMeasureTable({
   cardioType, muscleType, agilityType,
   onChange, onDetail,
 }) {
+  const mask = useMaskName();
   const getVal = (studentId, field) => formValues[studentId]?.[field] ?? "";
 
   return (
@@ -80,7 +82,7 @@ export function ClassMeasureTable({
                 <TableCell>
                   <MeasurementStatusBadge status={status} />
                 </TableCell>
-                <TableCell className="font-medium">{student.name}</TableCell>
+                <TableCell className="font-medium">{mask(student.name)}</TableCell>
                 <TableCell className="text-center text-gray-500">
                   {student.gender === "M" ? "남" : "여"}
                 </TableCell>

@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { GRADE_COLORS, GRADE_LABELS, FITNESS_AREAS, FITNESS_GRADE_FIELDS } from "../../constants/paps";
 import { avgOf, avgRounded } from "../../utils/stats";
+import { useMaskName } from "../../hooks/useMaskName";
 
 const AREA_KEYS = FITNESS_AREAS.map((a) => ({ area: a.label, key: a.gradeField }));
 
@@ -32,6 +33,7 @@ function avgGrade(measurements, key) {
 }
 
 export function PersonalGrowthCard({ student, measurements, schoolName, schoolYear, id }) {
+  const mask = useMaskName();
   // 전체 연도 평균 등급
   const avgGrades = useMemo(() => {
     if (!measurements.length) return null;
@@ -92,7 +94,7 @@ export function PersonalGrowthCard({ student, measurements, schoolName, schoolYe
       {/* 학생 정보 */}
       <div className="flex justify-between items-center mb-4">
         <div>
-          <span className="text-lg font-bold text-gray-800">{student.name}</span>
+          <span className="text-lg font-bold text-gray-800">{mask(student.name)}</span>
           <span className="text-sm text-gray-500 ml-2">
             {student.grade}학년 {student.class}반 ({student.gender === "M" ? "남" : "여"})
           </span>

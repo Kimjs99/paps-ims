@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
+import { useMaskName } from "../../hooks/useMaskName";
 
 // 등급 미리보기 라벨 (bmi는 "BMI" 표기)
 const GRADE_AREA_LABELS = Object.fromEntries(
@@ -28,6 +29,7 @@ const GRADE_AREA_LABELS = Object.fromEntries(
 );
 
 export default function StudentMeasure() {
+  const mask = useMaskName();
   const { classId, studentId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -158,7 +160,7 @@ export default function StudentMeasure() {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{student.name} 학생 측정 입력</h1>
+          <h1 className="text-xl font-bold text-gray-900">{mask(student.name)} 학생 측정 입력</h1>
           <p className="text-sm text-gray-500">
             {student.grade}학년 {student.class}반 · {student.gender === "M" ? "남" : "여"} · 학번 {student.student_id}
           </p>
