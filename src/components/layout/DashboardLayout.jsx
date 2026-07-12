@@ -19,6 +19,7 @@ import { PollingIndicator } from "../dashboard/PollingIndicator";
 import { AuthExpiredBanner } from "./AuthExpiredBanner";
 import { SchemaMigrationBanner } from "./SchemaMigrationBanner";
 import { ThemeToggle } from "./ThemeToggle";
+import { MaskToggle } from "./MaskToggle";
 
 const sidebarItems = [
   { to: "/dashboard", label: "대시보드 홈", Icon: LayoutDashboard, exact: true },
@@ -73,6 +74,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
             </div>
             {/* 테마 토글 */}
             <ThemeToggle iconSize={14} />
+            <MaskToggle iconSize={14} />
             <Link
               to="/"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition-colors"

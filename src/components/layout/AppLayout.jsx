@@ -8,6 +8,7 @@ import { SchemaMigrationBanner } from "./SchemaMigrationBanner";
 import { AppFooter } from "./AppFooter";
 import { AuthExpiredBanner } from "./AuthExpiredBanner";
 import { ThemeToggle } from "./ThemeToggle";
+import { MaskToggle } from "./MaskToggle";
 
 const navItems = [
   { to: "/", label: "홈", Icon: Home },
@@ -64,6 +65,7 @@ export function AppLayout({ children }) {
             </Link>
             {/* 테마 토글 */}
             <ThemeToggle className="ml-1" iconClassName="h-3.5 w-3.5" />
+            <MaskToggle iconClassName="h-3.5 w-3.5" />
 
             <div className="ml-2 flex items-center gap-2">
               {user?.picture && (

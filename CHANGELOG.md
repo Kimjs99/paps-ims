@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.0] - 2026-07-12
+
+### ✨ Features
+- **실명 블라인드 빠른 토글** — 앱·대시보드 헤더(테마 토글 옆)에 눈 아이콘 버튼 추가. 클릭 한 번으로 블라인드 ↔ 실명 전환 (설정 → 개인정보 보호와 상태 공유). `layout/MaskToggle.jsx`
+
 ## [v1.1.0] - 2026-07-12
 
 ### ✨ Features
