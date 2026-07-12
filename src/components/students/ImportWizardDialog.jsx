@@ -101,7 +101,7 @@ function TypeSelect({ label, value, onChange, options }) {
 // 임의 양식(CSV/XLSX) → 컬럼 매핑 → 학생 일괄 등록 후보 생성 마법사
 // 검증·등록은 Students 페이지의 기존 경로(csvPreview → 일괄 등록)를 재사용한다.
 export function ImportWizardDialog({
-  open, onOpenChange, studentSchema, gradeOptions, schoolYear, existingIds, onApply,
+  open, onOpenChange, studentSchema, gradeOptions, existingIds, onApply,
 }) {
   const fileRef = useRef();
   const [file, setFile] = useState(null);
@@ -171,9 +171,9 @@ export function ImportWizardDialog({
   const built = useMemo(() => {
     if (!grid || headerRow < 0) return { candidates: [], errors: [] };
     return buildImportRows(grid, headerRow, mapping, {
-      schoolYear, fallbackGrade: fbGrade, fallbackClass: fbClass, existingIds,
+      fallbackGrade: fbGrade, fallbackClass: fbClass, existingIds,
     });
-  }, [grid, headerRow, mapping, schoolYear, fbGrade, fbClass, existingIds]);
+  }, [grid, headerRow, mapping, fbGrade, fbClass, existingIds]);
 
   const handleApply = () => {
     const valid = [];
@@ -320,7 +320,7 @@ export function ImportWizardDialog({
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-xs text-amber-800 mb-2">
                   이 양식에는 학년/반 컬럼이 없습니다. 전체 행에 적용할 값을 입력해 주세요.
-                  {mapping.student_id == null && " (학번은 학년도+학년+반+번호로 자동 생성됩니다)"}
+                  {mapping.student_id == null && " (학번은 학년+반+번호로 자동 생성됩니다 — 예: 1학년 1반 1번 → 10101)"}
                 </p>
                 <div className="flex gap-2">
                   {mapping.grade == null && (

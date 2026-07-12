@@ -75,20 +75,20 @@ describe('detectHeaderRow (헤더 행 자동 탐지)', () => {
 
 describe('buildImportRows (후보 생성)', () => {
   const mapping = detectHeaderRow(RECORD_SHEET).mapping;
-  const opts = { schoolYear: 2026, fallbackGrade: '1', fallbackClass: '1' };
+  const opts = { fallbackGrade: '1', fallbackClass: '1' };
 
-  it('학번 자동 생성(학년도+학년+반+번호 2자리) + 남/여 변환 + 원본 행 번호', () => {
+  it('학번 자동 생성(학년+반2자리+번호2자리) + 남/여 변환 + 원본 행 번호', () => {
     const { candidates, errors } = buildImportRows(RECORD_SHEET, 4, mapping, opts);
     expect(errors).toEqual([]);
     expect(candidates).toHaveLength(3); // 빈 행 제외
     expect(candidates[0]).toEqual({
       line: 6,
-      data: { student_id: '20261101', name: '권민준', gender: 'M', grade: '1', class: '1', height: '152', weight: '37.8' },
+      data: { student_id: '10101', name: '권민준', gender: 'M', grade: '1', class: '1', height: '152', weight: '37.8' },
       // 이 테스트의 mapping은 학생 필드만 포함(detectHeaderRow) — 측정 컬럼 미매핑 시 빈 값
       measures: { cardio_value: '', muscle_value: '', flexibility_value: '', agility_value: '' },
     });
     expect(candidates[1].data.gender).toBe('F');
-    expect(candidates[1].data.student_id).toBe('20261102');
+    expect(candidates[1].data.student_id).toBe('10102');
   });
 
   it('키/몸무게 0은 미입력으로 처리 (0 저장 금지)', () => {
@@ -111,12 +111,12 @@ describe('buildImportRows (후보 생성)', () => {
       ['20240101', '홍길동', 'M', '1', '1'],
     ];
     const m = guessMapping(grid[0]);
-    const { candidates } = buildImportRows(grid, 0, m, { schoolYear: 2026 });
+    const { candidates } = buildImportRows(grid, 0, m, {});
     expect(candidates[0].data.student_id).toBe('20240101');
   });
 
   it('학번 없고 학년/반 폴백도 없으면 오류', () => {
-    const { candidates, errors } = buildImportRows(RECORD_SHEET, 4, mapping, { schoolYear: 2026 });
+    const { candidates, errors } = buildImportRows(RECORD_SHEET, 4, mapping, {});
     expect(candidates).toHaveLength(0);
     expect(errors[0]).toContain('학번을 생성할 수 없습니다');
   });
@@ -155,10 +155,10 @@ describe('buildImportRows (후보 생성)', () => {
       ['홍길동', '남', '2학년', '3반', '7'],
     ];
     const m = guessMapping(grid[0]);
-    const { candidates } = buildImportRows(grid, 0, m, { schoolYear: 2026 });
+    const { candidates } = buildImportRows(grid, 0, m, {});
     expect(candidates[0].data.grade).toBe('2');
     expect(candidates[0].data.class).toBe('3');
-    expect(candidates[0].data.student_id).toBe('20262307');
+    expect(candidates[0].data.student_id).toBe('20307');
   });
 });
 
@@ -209,7 +209,7 @@ describe('buildImportRows — 체력측정 기록', () => {
       ['이로하', '남', '17', '-8.7'],
     ];
     const mapping = { name: 0, gender: 1, cardio_value: 2, flexibility_value: 3 };
-    const { candidates } = buildImportRows(grid, 0, mapping, { schoolYear: 2026, fallbackGrade: '1', fallbackClass: '1' });
+    const { candidates } = buildImportRows(grid, 0, mapping, { fallbackGrade: '1', fallbackClass: '1' });
     expect(candidates[0].measures).toEqual({
       cardio_value: '17', muscle_value: '', flexibility_value: '-8.7', agility_value: '',
     });

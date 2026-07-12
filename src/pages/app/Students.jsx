@@ -37,7 +37,7 @@ function StudentForm({ onSubmit, isLoading, schema, gradeOptions }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label>학번 *</Label>
-          <Input {...register("student_id")} placeholder="예: 20240101" />
+          <Input {...register("student_id")} placeholder="예: 10101 (1학년 1반 1번)" />
           {errors.student_id && <p className="text-xs text-red-500">{errors.student_id.message}</p>}
         </div>
         <div className="space-y-1">
@@ -214,8 +214,8 @@ export default function Students() {
     // 기록시트지 표기(남/여) 그대로 붙여넣을 수 있도록 예시도 남/여 사용 (M/F도 업로드 시 인식됨)
     const header = "student_id,name,gender,grade,class,height,weight";
     const examples = [
-      "20240101,홍길동,남,1,1,165,58",
-      "20240102,김영희,여,1,1,158,52",
+      "10101,홍길동,남,1,1,165,58",
+      "10102,김영희,여,1,1,158,52",
     ].join("\n");
     // BOM 포함 — Excel에서 열 때 한글 깨짐 방지
     downloadCsv("students_template.csv", `${header}\n${examples}\n`);
@@ -545,7 +545,6 @@ export default function Students() {
         onOpenChange={setImportOpen}
         studentSchema={studentSchema}
         gradeOptions={gradeOptions}
-        schoolYear={schoolYear}
         existingIds={existingIds}
         onApply={handleImportApply}
       />

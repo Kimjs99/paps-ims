@@ -129,9 +129,9 @@ const optionalMeasure = (v) => {
 const measureValue = (v) => String(v ?? "").match(/-?\d+(\.\d+)?/)?.[0] ?? "";
 
 // 그리드 + 매핑 → 학생 후보/오류 목록 (Zod 검증 전 단계)
-// opts: schoolYear(학번 생성용), fallbackGrade/fallbackClass(컬럼 미매핑 시 수동 입력값), existingIds(중복 학번 Set)
+// opts: fallbackGrade/fallbackClass(컬럼 미매핑 시 수동 입력값), existingIds(중복 학번 Set)
 export const buildImportRows = (grid, headerRow, mapping, opts = {}) => {
-  const { schoolYear, fallbackGrade = "", fallbackClass = "", existingIds = new Set() } = opts;
+  const { fallbackGrade = "", fallbackClass = "", existingIds = new Set() } = opts;
   const candidates = [];
   const errors = [];
   const seenIds = new Set();
@@ -155,13 +155,13 @@ export const buildImportRows = (grid, headerRow, mapping, opts = {}) => {
 
     let student_id = cell(row, "student_id");
     if (!student_id) {
-      // 학번 미제공 시 생성: 학년도 + 학년 + 반 + 번호(2자리) — 기존 데이터 학번 규칙과 동일
-      if (!schoolYear || !grade || !cls) {
+      // 학번 미제공 시 생성: 학년 + 반(2자리) + 번호(2자리) — 1학년 1반 1번 → 10101
+      if (!grade || !cls) {
         errors.push(`${line}행(${name}): 학번이 없고 학년/반 정보도 없어 학번을 생성할 수 없습니다`);
         return;
       }
       const number = firstNumber(cell(row, "number")) || String(i + 1);
-      student_id = `${schoolYear}${grade}${cls}${number.padStart(2, "0")}`;
+      student_id = `${grade}${cls.padStart(2, "0")}${number.padStart(2, "0")}`;
     }
 
     if (seenIds.has(student_id)) {

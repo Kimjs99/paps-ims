@@ -28,7 +28,6 @@ const defaultProps = () => ({
   onOpenChange: vi.fn(),
   studentSchema: makeStudentSchema('중학교'),
   gradeOptions: [1, 2, 3],
-  schoolYear: 2026,
   existingIds: new Set(),
   onApply: vi.fn(),
 });
@@ -54,7 +53,7 @@ describe('ImportWizardDialog', () => {
     expect(screen.getByText('등록 목록에 추가').closest('button')).toBeDisabled();
   });
 
-  it('반 직접 입력 후 적용 → 학번 자동 생성(학년도+학년+반+번호) + 남/여 변환 결과 onApply 전달', async () => {
+  it('반 직접 입력 후 적용 → 학번 자동 생성(학년+반+번호) + 남/여 변환 결과 onApply 전달', async () => {
     // 학년 컬럼은 있고 반 컬럼만 없는 양식 — 반은 일반 Input이라 jsdom에서 입력 가능
     // (학년 폴백은 Radix Select라 jsdom 포인터 제약으로 여기서는 컬럼 매핑 경로로 검증)
     const props = defaultProps();
@@ -64,13 +63,13 @@ describe('ImportWizardDialog', () => {
     fireEvent.change(screen.getByLabelText('반 직접 입력'), { target: { value: '1' } });
     await waitFor(() => expect(screen.getByText(/2명 인식/)).toBeInTheDocument());
     expect(screen.getByText('권민준')).toBeInTheDocument();
-    expect(screen.getByText('20261101')).toBeInTheDocument();
+    expect(screen.getByText('10101')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('2명 검증 후 등록 목록에 추가'));
     expect(props.onApply).toHaveBeenCalledWith(
       [
-        expect.objectContaining({ student_id: '20261101', name: '권민준', gender: 'M', grade: 1, class: 1, height: 152 }),
-        expect.objectContaining({ student_id: '20261102', name: '김라임', gender: 'F' }),
+        expect.objectContaining({ student_id: '10101', name: '권민준', gender: 'M', grade: 1, class: 1, height: 152 }),
+        expect.objectContaining({ student_id: '10102', name: '김라임', gender: 'F' }),
       ],
       [],
       null // 측정 컬럼 없는 양식
@@ -117,8 +116,8 @@ describe('ImportWizardDialog', () => {
         // 이 양식엔 순발력 단서가 없어 기본 종목(sprint_50m) 유지
         types: { cardioType: 'shuttle_run', muscleType: 'sit_up', agilityType: 'sprint_50m' },
         byStudent: {
-          20261101: { cardio_value: '42', muscle_value: '', flexibility_value: '-8.7', agility_value: '' },
-          20261102: { cardio_value: '', muscle_value: '', flexibility_value: '10.5', agility_value: '' },
+          10101: { cardio_value: '42', muscle_value: '', flexibility_value: '-8.7', agility_value: '' },
+          10102: { cardio_value: '', muscle_value: '', flexibility_value: '10.5', agility_value: '' },
         },
       }
     );
