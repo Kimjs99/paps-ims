@@ -32,14 +32,47 @@ export const parseCsvLine = (line) => {
   return cells;
 };
 
-// CSV 전체 텍스트 → 행 배열 (BOM 제거, CR/LF 처리, 빈 줄 제외)
-export const parseCsv = (text) =>
-  String(text ?? "")
-    .replace(/^\uFEFF/, "") // UTF-8 BOM 제거
-    .split("\n")
-    .map((l) => (l.endsWith("\r") ? l.slice(0, -1) : l))
-    .filter((l) => l.trim())
-    .map(parseCsvLine);
+// CSV 전체 텍스트 → 행 배열 (BOM 제거, CR/LF 처리, 빈 행 제외)
+// 따옴표 안의 개행을 셀 값으로 보존한다 — 기록시트지처럼 "셔틀런\n(회)" 형태의
+// 다중행 헤더 셀이 있는 파일을 줄 단위 분리로 파싱하면 행이 중간에 잘린다.
+export const parseCsv = (text) => {
+  const s = String(text ?? "").replace(/^\uFEFF/, ""); // UTF-8 BOM 제거
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (s[i + 1] === '"') {
+          cur += '"'; // 이스케이프된 따옴표
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cur += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      row.push(cur.trim());
+      cur = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && s[i + 1] === "\n") i++; // CRLF
+      row.push(cur.trim());
+      rows.push(row);
+      row = [];
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  row.push(cur.trim());
+  rows.push(row);
+  return rows.filter((r) => r.some((c) => c !== ""));
+};
 
 // parseCsv + 원본 파일 행 번호(1-base) 보존 — 오류 안내가 실제 파일 행을 가리키도록.
 // 빈 줄을 제외한 뒤의 인덱스로 "N행"을 계산하면 파일 중간 빈 줄만큼 어긋난다.

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { Search, UserPlus, Upload, Download, Loader2, Trash2, UserX } from "lucide-react";
+import { Search, UserPlus, Upload, Download, Loader2, Trash2, UserX, Wand2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { v4 as uuidv4 } from "uuid";
@@ -21,6 +21,7 @@ import {
 } from "../../components/ui/select";
 import { toast } from "../../store/toastStore";
 import { parseCsvWithLines, downloadCsv, normalizeGender, readCsvFile } from "../../utils/csv";
+import { ImportWizardDialog } from "../../components/students/ImportWizardDialog";
 
 function StudentForm({ onSubmit, isLoading, schema, gradeOptions }) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
@@ -93,11 +94,13 @@ export default function Students() {
   const deactivateClass = useDeactivateClassStudents();
   const fileRef = useRef();
   const schoolLevel = useSettingsStore((s) => s.schoolLevel);
+  const schoolYear = useSettingsStore((s) => s.schoolYear);
 
   const [search, setSearch] = useState("");
   const [gradeFilter, setGradeFilter] = useState("all");
   const [classFilter, setClassFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [csvPreview, setCsvPreview] = useState(null);
   const [csvErrors, setCsvErrors] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null); // {student, rowIndex}
@@ -117,6 +120,8 @@ export default function Students() {
       return matchSearch && matchGrade && matchClass;
     });
   }, [students, search, gradeFilter, classFilter]);
+
+  const existingIds = useMemo(() => new Set(students.map((s) => s.student_id)), [students]);
 
   const grades = useMemo(() => [...new Set(students.map((s) => s.grade))].sort(), [students]);
   const classes = useMemo(
@@ -180,6 +185,18 @@ export default function Students() {
     }
     if (valid.length === 0 && errors.length === 0) {
       toast.error("CSV에서 등록할 학생을 찾지 못했습니다.");
+    }
+  };
+
+  // 가져오기 마법사 결과 → 기존 CSV 미리보기·일괄 등록 경로 재사용
+  const handleImportApply = (valid, errors) => {
+    setCsvPreview(valid.length > 0 ? valid : null);
+    setCsvErrors(errors);
+    if (errors.length > 0) {
+      toast.error(`${errors.length}행 검증 실패 — 해당 행은 제외됩니다.`);
+    }
+    if (valid.length === 0 && errors.length === 0) {
+      toast.error("가져올 학생을 찾지 못했습니다.");
     }
   };
 
@@ -261,6 +278,9 @@ export default function Students() {
             <Upload className="h-4 w-4" /> CSV 업로드
           </Button>
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCsvFile} />
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Wand2 className="h-4 w-4" /> 양식 가져오기
+          </Button>
           <Button size="sm" onClick={() => setDialogOpen(true)}>
             <UserPlus className="h-4 w-4" /> 신규 등록
           </Button>
@@ -476,6 +496,17 @@ export default function Students() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 양식 가져오기 마법사 */}
+      <ImportWizardDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        studentSchema={studentSchema}
+        gradeOptions={gradeOptions}
+        schoolYear={schoolYear}
+        existingIds={existingIds}
+        onApply={handleImportApply}
+      />
     </AppLayout>
   );
 }

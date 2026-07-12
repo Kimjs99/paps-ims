@@ -134,6 +134,17 @@ describe('parseCsv (전체 텍스트 파싱)', () => {
     expect(parseCsv(undefined)).toEqual([]);
   });
 
+  it('따옴표 안 개행 보존 — 기록시트지 다중행 헤더 셀이 행을 쪼개지 않음', () => {
+    const rows = parseCsv('번호,이름,"셔틀런\n(회)","키\n(cm)"\r\n1,권민준,42,152\n');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual(['번호', '이름', '셔틀런\n(회)', '키\n(cm)']);
+    expect(rows[1]).toEqual(['1', '권민준', '42', '152']);
+  });
+
+  it('셀이 전부 빈 행만 제외 (일부 빈 셀 행은 유지)', () => {
+    expect(parseCsv('a,b\n,,\n1,\n')).toEqual([['a', 'b'], ['1', '']]);
+  });
+
   it('측정 CSV 템플릿 라운드트립 — 헤더 라벨의 괄호·쉼표 포함 셀 유지', () => {
     // ClassMeasure 템플릿 형식 (헤더 + 학생 행)
     const header =
