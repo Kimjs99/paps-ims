@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.2] - 2026-07-12
+
+### 🐛 Fixes
+- 푸터 제작자 표기에서 실명 제외 — "Developed by Kimjs99"로 변경
+
 ## [v1.0.1] - 2026-07-12
 
 ### ✨ Features
