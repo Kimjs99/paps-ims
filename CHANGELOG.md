@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.20.0] - 2026-07-12
+
+### ✨ Features
+- **PAPS 공식 점수제 도입** — 종합등급을 영역 등급 평균이 아닌 **공식 총점 기준**으로 산출 (기록시트지와 동일)
+  - `papsScoreTable.js`: 교육부 평가기준표(files/PAPS_평가기준표.xlsx)에서 초3~고3 × 남/여 × 8종목 + BMI 기록→점수(0~20) 구간 3,592개 자동 추출
+  - `papsScore.js`: `calcScore`(구간 틈새 최근접 폴백)·`calcBmiScore`(비연속 구간)·`calcTotalScore`(미측정 0점, 전부 미측정 null)·`totalGradeFromScore`(80↑1 / 60↑2 / 40↑3 / 20↑4 / 미만 5)
+  - `buildGrades`: 종목별 점수·bmi_score·total_score 반환 + total_grade 공식 산출 — 측정 저장·미리보기·가져오기 마법사·재계산 전 경로 적용. schoolLevel 미지정 시 기존 평균 방식 폴백
+  - 검증: 기록시트지 1학년 1반 29명 — 점수·BMI 점수·총점·종합등급 **199건 100% 재현** (기존 평균 방식은 종합등급 29건 중 11건 불일치였음)
+- ⚠️ 기존 저장 데이터는 설정 → 데이터 관리 → **"재계산"** 실행 시 공식 종합등급으로 갱신됨
+
+### ✅ Tests
+- Vitest 380 → **392 케이스**: 기록시트지 실측 재현(점수·BMI·총점·등급), 부분 측정 0점, 구간 틈새 폴백, 평균 방식 폴백
+
 ## [v0.19.0] - 2026-07-12
 
 ### ✨ Features

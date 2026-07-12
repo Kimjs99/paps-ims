@@ -1,4 +1,5 @@
 import { calcBMI, calcBMIGrade } from "./bmiCalc";
+import { calcScore, calcBmiScore, calcTotalScore, totalGradeFromScore } from "./papsScore";
 
 // grades_standard 시트 데이터를 기반으로 등급 계산
 export const calcGrade = (value, item, grade, gender, gradesData) => {
@@ -76,9 +77,26 @@ export const buildGrades = (formValues, student, gradesData, options = {}) => {
     formValues.agility_value, formValues.agility_type,
     student.grade, student.gender, gradesData
   );
+
+  // 종합등급 — PAPS 공식 점수제(기록→점수 0~20 합산 총점 기준). 기록시트지와 동일한 산출.
+  // schoolLevel 미지정(점수표 조회 불가) 시 기존 영역 등급 평균 방식으로 폴백.
+  if (options.schoolLevel) {
+    const ctx = { schoolLevel: options.schoolLevel, grade: student.grade, gender: student.gender };
+    const cardio_score = calcScore(formValues.cardio_value, formValues.cardio_type, ctx);
+    const muscle_score = calcScore(formValues.muscle_value, formValues.muscle_type, ctx);
+    const flexibility_score = calcScore(formValues.flexibility_value, "sit_and_reach", ctx);
+    const agility_score = calcScore(formValues.agility_value, formValues.agility_type, ctx);
+    const bmi_score = calcBmiScore(bmi, ctx);
+    const total_score = calcTotalScore([cardio_score, muscle_score, flexibility_score, agility_score, bmi_score]);
+    return {
+      bmi, bmi_grade, cardio_grade, muscle_grade, flexibility_grade, agility_grade,
+      cardio_score, muscle_score, flexibility_score, agility_score, bmi_score, total_score,
+      total_grade: totalGradeFromScore(total_score),
+    };
+  }
+
   const total_grade = calcTotalGrade([
     cardio_grade, muscle_grade, flexibility_grade, agility_grade, bmi_grade,
   ]);
-
   return { bmi, bmi_grade, cardio_grade, muscle_grade, flexibility_grade, agility_grade, total_grade };
 };
