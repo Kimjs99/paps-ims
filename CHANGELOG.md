@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.0] - 2026-07-12
+
+### ✨ Features
+- **종목별 점수·총점 화면 표시** — PAPS 공식 점수(0~20)와 총점(100점 만점)을 등급 옆에 표시
+  - 학생 개별 측정: 등급 미리보기에 종목별 점수 + 종합 등급 옆 총점 (총점 N/100점)
+  - 학생 상세 조회: 전체 측정 기록 테이블 각 종목 셀에 점수, 종합 셀에 총점 — 측정 당시 학년(measured_grade) 기준으로 표시용 재계산 (`scoresForMeasurement`)
+  - 점수는 시트에 저장하지 않고 표시 시점에 재계산 — 학급별 대시보드의 최우수 병합 목록은 의미 왜곡 방지를 위해 등급만 유지
+
 ## [v1.2.0] - 2026-07-12
 
 ### ✨ Features

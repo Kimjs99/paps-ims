@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcScore, calcBmiScore, calcTotalScore, totalGradeFromScore } from '../utils/papsScore';
+import { calcScore, calcBmiScore, calcTotalScore, totalGradeFromScore, scoresForMeasurement } from '../utils/papsScore';
 import { buildGrades } from '../utils/gradeCalc';
 import { GRADES_SEED_BY_LEVEL } from '../utils/gradesStandardSeed';
 
@@ -68,6 +68,35 @@ describe('calcTotalScore·totalGradeFromScore (총점·종합등급)', () => {
     expect(totalGradeFromScore(39)).toBe(4);
     expect(totalGradeFromScore(14)).toBe(5);
     expect(totalGradeFromScore(null)).toBeNull();
+  });
+});
+
+describe('scoresForMeasurement (저장된 측정 레코드 → 표시용 점수)', () => {
+  it('기록시트지 권민준 사례 재현 — 총점 53', () => {
+    const m = {
+      cardio_type: 'shuttle_run', cardio_value: 42,
+      muscle_type: 'grip_strength', muscle_value: 23.1,
+      flexibility_value: 6,
+      agility_type: 'standing_jump', agility_value: 200,
+      bmi: 16.4,
+    };
+    const sc = scoresForMeasurement(m, { grade: 1, gender: 'M', schoolLevel: '중학교' });
+    expect(sc).toEqual({
+      cardio_score: 9, muscle_score: 8, flexibility_score: 12, agility_score: 14, bmi_score: 10, total_score: 53,
+    });
+  });
+
+  it('측정 당시 학년(measured_grade) 우선 사용', () => {
+    const m = { cardio_type: 'shuttle_run', cardio_value: 42, measured_grade: 1, bmi: null };
+    // 현재 학년 3이어도 측정 당시 1학년 기준으로 점수 계산
+    const sc = scoresForMeasurement(m, { grade: 3, gender: 'M', schoolLevel: '중학교' });
+    expect(sc.cardio_score).toBe(9);
+  });
+
+  it('값 없는 종목은 null 점수, 전부 없으면 total_score null', () => {
+    const sc = scoresForMeasurement({ bmi: null }, { grade: 1, gender: 'M', schoolLevel: '중학교' });
+    expect(sc.cardio_score).toBeNull();
+    expect(sc.total_score).toBeNull();
   });
 });
 

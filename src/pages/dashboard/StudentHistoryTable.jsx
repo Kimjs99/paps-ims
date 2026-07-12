@@ -2,8 +2,11 @@
 import { GradeBadge } from "../../components/ui/GradeBadge";
 import { CARDIO_TYPES, MUSCLE_TYPES, AGILITY_TYPES, FLEXIBILITY_ITEM } from "../../constants/paps";
 import { getTypeInfo, formatDatetime } from "./studentDetailData";
+import { scoresForMeasurement } from "../../utils/papsScore";
+import { useSettingsStore } from "../../store/settingsStore";
 
-export function StudentHistoryTable({ rawMeasurements, avgRecord }) {
+export function StudentHistoryTable({ rawMeasurements, avgRecord, student }) {
+  const schoolLevel = useSettingsStore((st) => st.schoolLevel);
   // 테이블 헤더용 종목 정보 (최신 측정 기준)
   const latestM = rawMeasurements[0];
   const headerCardio = getTypeInfo(CARDIO_TYPES, latestM?.cardio_type);
@@ -47,6 +50,10 @@ export function StudentHistoryTable({ rawMeasurements, avgRecord }) {
               const cardioInfo = getTypeInfo(CARDIO_TYPES, m.cardio_type);
               const muscleInfo = getTypeInfo(MUSCLE_TYPES, m.muscle_type);
               const agilityInfo = getTypeInfo(AGILITY_TYPES, m.agility_type);
+              // 점수는 시트에 저장하지 않음 — 측정 당시 학년 기준으로 표시용 재계산
+              const sc = student
+                ? scoresForMeasurement(m, { grade: student.grade, gender: student.gender, schoolLevel })
+                : {};
               return (
                 <tr key={m.measurement_id} className="hover:bg-gray-50">
                   <td className="px-3 py-2 text-gray-500 whitespace-nowrap text-xs">
@@ -58,6 +65,7 @@ export function StudentHistoryTable({ rawMeasurements, avgRecord }) {
                       <span className="text-sm font-medium text-gray-700">
                         {m.cardio_value != null ? `${m.cardio_value}${cardioInfo.unit}` : "—"}
                       </span>
+                      {sc.cardio_score != null && <span className="text-[11px] text-gray-400">{sc.cardio_score}점</span>}
                       <GradeBadge grade={m.cardio_grade} />
                     </div>
                   </td>
@@ -66,6 +74,7 @@ export function StudentHistoryTable({ rawMeasurements, avgRecord }) {
                       <span className="text-sm font-medium text-gray-700">
                         {m.muscle_value != null ? `${m.muscle_value}${muscleInfo.unit}` : "—"}
                       </span>
+                      {sc.muscle_score != null && <span className="text-[11px] text-gray-400">{sc.muscle_score}점</span>}
                       <GradeBadge grade={m.muscle_grade} />
                     </div>
                   </td>
@@ -74,6 +83,7 @@ export function StudentHistoryTable({ rawMeasurements, avgRecord }) {
                       <span className="text-sm font-medium text-gray-700">
                         {m.flexibility_value != null ? `${m.flexibility_value}${FLEXIBILITY_ITEM.unit}` : "—"}
                       </span>
+                      {sc.flexibility_score != null && <span className="text-[11px] text-gray-400">{sc.flexibility_score}점</span>}
                       <GradeBadge grade={m.flexibility_grade} />
                     </div>
                   </td>
@@ -82,6 +92,7 @@ export function StudentHistoryTable({ rawMeasurements, avgRecord }) {
                       <span className="text-sm font-medium text-gray-700">
                         {m.agility_value != null ? `${m.agility_value}${agilityInfo.unit}` : "—"}
                       </span>
+                      {sc.agility_score != null && <span className="text-[11px] text-gray-400">{sc.agility_score}점</span>}
                       <GradeBadge grade={m.agility_grade} />
                     </div>
                   </td>
@@ -90,10 +101,18 @@ export function StudentHistoryTable({ rawMeasurements, avgRecord }) {
                       <span className="text-sm font-medium text-gray-700">
                         {m.bmi != null ? m.bmi : "—"}
                       </span>
+                      {sc.bmi_score != null && <span className="text-[11px] text-gray-400">{sc.bmi_score}점</span>}
                       <GradeBadge grade={m.bmi_grade} />
                     </div>
                   </td>
-                  <td className="px-3 py-2"><GradeBadge grade={m.total_grade} size="sm" /></td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      {sc.total_score != null && (
+                        <span className="text-xs font-semibold text-gray-600">{sc.total_score}점</span>
+                      )}
+                      <GradeBadge grade={m.total_grade} size="sm" />
+                    </div>
+                  </td>
                 </tr>
               );
             })}

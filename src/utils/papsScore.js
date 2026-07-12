@@ -38,6 +38,19 @@ export const calcTotalScore = (scores) => {
   return scores.reduce((sum, s) => sum + (s ?? 0), 0);
 };
 
+// 저장된 측정 레코드 → 종목별 점수·총점 재계산 (표시용 — 점수는 시트에 저장하지 않음)
+// grade는 측정 당시 학년(m.measured_grade) 우선, 없으면 호출부가 넘긴 현재 학년 사용
+export const scoresForMeasurement = (m, { grade, gender, schoolLevel }) => {
+  const ctx = { schoolLevel, grade: m.measured_grade ?? grade, gender };
+  const cardio_score = calcScore(m.cardio_value, m.cardio_type, ctx);
+  const muscle_score = calcScore(m.muscle_value, m.muscle_type, ctx);
+  const flexibility_score = calcScore(m.flexibility_value, "sit_and_reach", ctx);
+  const agility_score = calcScore(m.agility_value, m.agility_type, ctx);
+  const bmi_score = calcBmiScore(m.bmi, ctx);
+  const total_score = calcTotalScore([cardio_score, muscle_score, flexibility_score, agility_score, bmi_score]);
+  return { cardio_score, muscle_score, flexibility_score, agility_score, bmi_score, total_score };
+};
+
 // 총점 → 종합등급 (교육부 기준: 80↑ 1등급 / 60↑ 2 / 40↑ 3 / 20↑ 4 / 미만 5)
 export const totalGradeFromScore = (totalScore) => {
   if (totalScore === null || totalScore === undefined) return null;

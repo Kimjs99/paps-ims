@@ -182,7 +182,7 @@ export default function StudentDetail() {
 
         {/* 전체 측정 이력 테이블 */}
         {rawMeasurements.length > 0 && (
-          <StudentHistoryTable rawMeasurements={rawMeasurements} avgRecord={avgRecord} />
+          <StudentHistoryTable rawMeasurements={rawMeasurements} avgRecord={avgRecord} student={student} />
         )}
       </div>
     </DashboardLayout>

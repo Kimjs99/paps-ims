@@ -330,19 +330,31 @@ export default function StudentMeasure() {
           <Card className="sticky top-20">
             <CardHeader><CardTitle className="text-base">등급 미리보기</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {Object.entries(GRADE_AREA_LABELS).map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{label}</span>
-                  <GradeBadge grade={grades?.[key]} />
-                </div>
-              ))}
+              {Object.entries(GRADE_AREA_LABELS).map(([key, label]) => {
+                const score = grades?.[key.replace("_grade", "_score")];
+                return (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">{label}</span>
+                    <span className="flex items-center gap-1.5">
+                      {score != null && <span className="text-xs text-gray-400">{score}점</span>}
+                      <GradeBadge grade={grades?.[key]} />
+                    </span>
+                  </div>
+                );
+              })}
               <div className="border-t pt-3 flex items-center justify-between">
                 <span className="text-sm font-semibold text-gray-800">종합 등급</span>
-                <GradeBadge grade={grades?.total_grade} size="lg" showLabel />
+                <span className="flex items-center gap-2">
+                  {grades?.total_score != null && (
+                    <span className="text-sm font-semibold text-gray-600">{grades.total_score}점</span>
+                  )}
+                  <GradeBadge grade={grades?.total_grade} size="lg" showLabel />
+                </span>
               </div>
               {grades?.total_grade && (
                 <p className="text-xs text-gray-400 text-center">
                   {GRADE_LABELS[grades.total_grade]}
+                  {grades.total_score != null && ` · 총점 ${grades.total_score}/100점`}
                 </p>
               )}
               <p className="text-[11px] text-gray-400">
