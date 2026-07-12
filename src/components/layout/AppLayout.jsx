@@ -5,6 +5,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { useLogout } from "../../hooks/useLogout";
 import { cn } from "../../lib/utils";
 import { SchemaMigrationBanner } from "./SchemaMigrationBanner";
+import { AppFooter } from "./AppFooter";
 import { AuthExpiredBanner } from "./AuthExpiredBanner";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -95,9 +96,7 @@ export function AppLayout({ children }) {
       </main>
 
       {/* 푸터 */}
-      <footer className="border-t bg-white py-3 text-center text-xs text-gray-400">
-        © 2026 PAPS-IMS · Developed by Kimjs99
-      </footer>
+      <AppFooter />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   LogOut,
   LayoutDashboard,
 } from "lucide-react";
+import { AppFooter } from "./AppFooter";
 import { useAuthStore } from "../../store/authStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useLogout } from "../../hooks/useLogout";
@@ -120,9 +121,7 @@ export function DashboardLayout({ children, dataUpdatedAt }) {
       </div>
 
       {/* 푸터 */}
-      <footer className="border-t dark:border-gray-700 bg-white dark:bg-gray-900 py-3 text-center text-xs text-gray-400 print-hidden">
-        © 2026 PAPS-IMS · Developed by Kimjs99
-      </footer>
+      <AppFooter className="dark:border-gray-700 dark:bg-gray-900 print-hidden" />
 
       {/* 모바일 하단 탭바 */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t dark:border-gray-700 z-40 print-hidden">

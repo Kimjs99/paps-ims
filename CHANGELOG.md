@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.1] - 2026-07-12
+
+### ✨ Features
+- **푸터 고지 문구** — 공용 `AppFooter` 컴포넌트 신설 (앱·대시보드 레이아웃 중복 제거): 제작자·버전(package.json 자동 표기)·저작권·"학교 교육 목적 외 상업적 사용 금지" 문구. 인쇄(PDF) 시 숨김·다크 모드 유지
+
 ## [v1.0.0] - 2026-07-12 — 🎉 정식 릴리스
 
 v0.1.0(2026-03-10)부터 32개 버전에 걸친 개발을 마무리한 첫 정식 릴리스.
