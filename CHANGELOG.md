@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
   - 학생 상세 조회: 전체 측정 기록 테이블 각 종목 셀에 점수, 종합 셀에 총점 — 측정 당시 학년(measured_grade) 기준으로 표시용 재계산 (`scoresForMeasurement`)
   - 점수는 시트에 저장하지 않고 표시 시점에 재계산 — 학급별 대시보드의 최우수 병합 목록은 의미 왜곡 방지를 위해 등급만 유지
 
+### 🔧 Chores
+- 로컬 참고 자료 `PAPS도움자료.pdf` gitignore 등록 (9c606cb)
+
 ## [v1.2.0] - 2026-07-12
 
 ### ✨ Features
