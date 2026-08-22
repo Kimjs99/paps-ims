@@ -52,7 +52,7 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Pretendard", "Inter", "sans-serif"],
+        sans: ["system-ui", "-apple-system", "Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"],
       },
     },
   },
